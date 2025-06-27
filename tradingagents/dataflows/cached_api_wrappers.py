@@ -16,6 +16,12 @@ from .time_series_cache import (
 from .interface import get_data_in_range
 from .googlenews_utils import getNewsData
 from .config import get_config, DATA_DIR
+from .financialdatasets_market_data import (
+    FinancialDatasetsClient,
+    get_financialdatasets_historical_prices,
+    get_financialdatasets_company_news,
+    get_financialdatasets_financials
+)
 
 logger = logging.getLogger(__name__)
 
@@ -372,6 +378,342 @@ def get_cached_news_data(symbol: str, curr_date: str, look_back_days: int = 7) -
     except Exception as e:
         logger.error(f"Failed to get cached news data: {e}")
         return f"Error retrieving cached news for {symbol}: {e}"
+
+
+# ===== FINANCIALDATASETS.AI CACHED WRAPPERS =====
+
+def fetch_financialdatasets_prices_cached(symbol: str, start_date: datetime, end_date: datetime, interval: str = 'day') -> pd.DataFrame:
+    """
+    Fetch financialdatasets.ai OHLCV data with intelligent caching
+    
+    Args:
+        symbol: Stock ticker symbol
+        start_date: Start date for data
+        end_date: End date for data
+        interval: Time interval ('day', 'minute', etc.)
+    
+    Returns:
+        DataFrame with OHLCV data
+    """
+    
+    def _fetch_financialdatasets_api(symbol: str, start_date: datetime, end_date: datetime) -> pd.DataFrame:
+        """Internal function to fetch from financialdatasets.ai API"""
+        try:
+            client = FinancialDatasetsClient()
+            
+            data = client.get_historical_prices(
+                ticker=symbol,
+                start_date=start_date.strftime('%Y-%m-%d'),
+                end_date=end_date.strftime('%Y-%m-%d'),
+                interval=interval
+            )
+            
+            if data.empty:
+                logger.warning(f"No financialdatasets.ai data found for {symbol}")
+                return pd.DataFrame()
+            
+            # Reset index to make time a column, add symbol
+            data = data.reset_index()
+            data['symbol'] = symbol
+            
+            # Rename 'time' to 'date' for consistency
+            if 'time' in data.columns:
+                data['date'] = data['time']
+            
+            # Round numeric columns
+            numeric_cols = ['open', 'high', 'low', 'close', 'volume']
+            for col in numeric_cols:
+                if col in data.columns:
+                    data[col] = data[col].round(4)
+            
+            logger.info(f"Retrieved {len(data)} records from financialdatasets.ai for {symbol}")
+            return data
+            
+        except Exception as e:
+            logger.error(f"Failed to fetch financialdatasets.ai data for {symbol}: {e}")
+            return pd.DataFrame()
+    
+    return fetch_ohlcv_with_cache(symbol, start_date, end_date, _fetch_financialdatasets_api)
+
+
+def fetch_financialdatasets_news_cached(symbol: str, start_date: datetime, end_date: datetime, limit: int = 100) -> pd.DataFrame:
+    """
+    Fetch financialdatasets.ai news data with caching
+    
+    Args:
+        symbol: Stock ticker symbol
+        start_date: Start date for news
+        end_date: End date for news
+        limit: Maximum number of articles
+    
+    Returns:
+        DataFrame with news data
+    """
+    
+    def _fetch_financialdatasets_news_api(symbol: str, start_date: datetime, end_date: datetime) -> pd.DataFrame:
+        """Internal function to fetch news from financialdatasets.ai API"""
+        try:
+            client = FinancialDatasetsClient()
+            
+            # Get company news
+            news_data = client.get_company_news(ticker=symbol, limit=limit)
+            
+            if news_data.empty:
+                logger.warning(f"No financialdatasets.ai news found for {symbol}")
+                return pd.DataFrame()
+            
+            # Filter by date range
+            if 'date' in news_data.columns:
+                news_data['date'] = pd.to_datetime(news_data['date'])
+                mask = (news_data['date'] >= start_date) & (news_data['date'] <= end_date)
+                news_data = news_data[mask]
+            
+            # Add symbol for consistency
+            news_data['symbol'] = symbol
+            
+            logger.info(f"Retrieved {len(news_data)} news articles from financialdatasets.ai for {symbol}")
+            return news_data
+            
+        except Exception as e:
+            logger.error(f"Failed to fetch financialdatasets.ai news for {symbol}: {e}")
+            return pd.DataFrame()
+    
+    return fetch_news_with_cache(symbol, start_date, end_date, _fetch_financialdatasets_news_api)
+
+
+def fetch_financialdatasets_financials_cached(symbol: str, period: str = 'annual', limit: int = 5) -> Dict[str, pd.DataFrame]:
+    """
+    Fetch financialdatasets.ai financial statements with caching
+    
+    Args:
+        symbol: Stock ticker symbol
+        period: 'annual', 'quarterly', or 'ttm'
+        limit: Number of statements to return
+    
+    Returns:
+        Dictionary with financial statements DataFrames
+    """
+    
+    def _fetch_financialdatasets_financials_api(symbol: str, start_date: datetime, end_date: datetime) -> pd.DataFrame:
+        """Internal function to fetch financials from financialdatasets.ai API"""
+        try:
+            client = FinancialDatasetsClient()
+            
+            # Get all financial statements
+            financials = client.get_all_financial_statements(ticker=symbol, period=period, limit=limit)
+            
+            # Combine all statements into one DataFrame for caching
+            combined_data = []
+            
+            for stmt_type, df in financials.items():
+                if not df.empty:
+                    df_copy = df.copy()
+                    df_copy['statement_type'] = stmt_type
+                    df_copy['symbol'] = symbol
+                    combined_data.append(df_copy)
+            
+            if combined_data:
+                result = pd.concat(combined_data, ignore_index=True)
+                logger.info(f"Retrieved financial statements from financialdatasets.ai for {symbol}")
+                return result
+            else:
+                return pd.DataFrame()
+            
+        except Exception as e:
+            logger.error(f"Failed to fetch financialdatasets.ai financials for {symbol}: {e}")
+            return pd.DataFrame()
+    
+    # For financials, we use a broader date range since they don't have specific dates
+    end_date = datetime.now()
+    start_date = end_date - timedelta(days=365 * 5)  # 5 years back
+    
+    cache = get_cache()
+    cached_data = cache.fetch_with_cache(symbol, DataType.FUNDAMENTALS, start_date, end_date, _fetch_financialdatasets_financials_api)
+    
+    # Split back into separate DataFrames
+    result = {}
+    if not cached_data.empty and 'statement_type' in cached_data.columns:
+        for stmt_type in cached_data['statement_type'].unique():
+            stmt_data = cached_data[cached_data['statement_type'] == stmt_type].drop('statement_type', axis=1)
+            result[stmt_type] = stmt_data
+    
+    return result
+
+
+def fetch_financialdatasets_earnings_cached(symbol: str) -> pd.DataFrame:
+    """
+    Fetch financialdatasets.ai earnings press releases with caching
+    
+    Args:
+        symbol: Stock ticker symbol
+    
+    Returns:
+        DataFrame with earnings press releases
+    """
+    
+    def _fetch_financialdatasets_earnings_api(symbol: str, start_date: datetime, end_date: datetime) -> pd.DataFrame:
+        """Internal function to fetch earnings from financialdatasets.ai API"""
+        try:
+            client = FinancialDatasetsClient()
+            
+            earnings_data = client.get_earnings_press_releases(ticker=symbol)
+            
+            if earnings_data.empty:
+                logger.warning(f"No financialdatasets.ai earnings found for {symbol}")
+                return pd.DataFrame()
+            
+            # Filter by date range if date column exists
+            if 'date' in earnings_data.columns:
+                earnings_data['date'] = pd.to_datetime(earnings_data['date'])
+                mask = (earnings_data['date'] >= start_date) & (earnings_data['date'] <= end_date)
+                earnings_data = earnings_data[mask]
+            
+            earnings_data['symbol'] = symbol
+            
+            logger.info(f"Retrieved {len(earnings_data)} earnings releases from financialdatasets.ai for {symbol}")
+            return earnings_data
+            
+        except Exception as e:
+            logger.error(f"Failed to fetch financialdatasets.ai earnings for {symbol}: {e}")
+            return pd.DataFrame()
+    
+    # Use a 2-year date range for earnings
+    end_date = datetime.now()
+    start_date = end_date - timedelta(days=365 * 2)
+    
+    return fetch_news_with_cache(symbol, start_date, end_date, _fetch_financialdatasets_earnings_api)
+
+
+def fetch_financialdatasets_insider_trades_cached(symbol: str, limit: int = 100) -> pd.DataFrame:
+    """
+    Fetch financialdatasets.ai insider trading data with caching
+    
+    Args:
+        symbol: Stock ticker symbol
+        limit: Maximum number of trades to return
+    
+    Returns:
+        DataFrame with insider trading data
+    """
+    
+    def _fetch_financialdatasets_insider_api(symbol: str, start_date: datetime, end_date: datetime) -> pd.DataFrame:
+        """Internal function to fetch insider trades from financialdatasets.ai API"""
+        try:
+            client = FinancialDatasetsClient()
+            
+            insider_data = client.get_insider_trades(ticker=symbol, limit=limit)
+            
+            if insider_data.empty:
+                logger.warning(f"No financialdatasets.ai insider trades found for {symbol}")
+                return pd.DataFrame()
+            
+            # Filter by date range if transaction_date exists
+            if 'transaction_date' in insider_data.columns:
+                insider_data['transaction_date'] = pd.to_datetime(insider_data['transaction_date'])
+                insider_data['date'] = insider_data['transaction_date']  # For consistency
+                mask = (insider_data['date'] >= start_date) & (insider_data['date'] <= end_date)
+                insider_data = insider_data[mask]
+            
+            insider_data['symbol'] = symbol
+            
+            logger.info(f"Retrieved {len(insider_data)} insider trades from financialdatasets.ai for {symbol}")
+            return insider_data
+            
+        except Exception as e:
+            logger.error(f"Failed to fetch financialdatasets.ai insider trades for {symbol}: {e}")
+            return pd.DataFrame()
+    
+    # Use a 1-year date range for insider trades
+    end_date = datetime.now()
+    start_date = end_date - timedelta(days=365)
+    
+    cache = get_cache()
+    return cache.fetch_with_cache(symbol, DataType.INSIDER, start_date, end_date, _fetch_financialdatasets_insider_api)
+
+
+def fetch_financialdatasets_realtime_quote(symbol: str) -> Dict[str, Any]:
+    """
+    Get real-time quote from financialdatasets.ai (not cached - real-time data)
+    
+    Args:
+        symbol: Stock ticker symbol
+    
+    Returns:
+        Dictionary with real-time quote data
+    """
+    try:
+        client = FinancialDatasetsClient()
+        quote = client.get_realtime_quote(ticker=symbol)
+        
+        logger.info(f"Retrieved real-time quote from financialdatasets.ai for {symbol}: ${quote.get('price', 'N/A')}")
+        return quote
+        
+    except Exception as e:
+        logger.error(f"Failed to fetch real-time quote for {symbol}: {e}")
+        return {}
+
+
+# Convenience Functions for financialdatasets.ai Integration
+def get_financialdatasets_cached_data(symbol: str, start_date: str, end_date: str, data_type: str = 'prices') -> str:
+    """
+    Get cached financialdatasets.ai data in string format (compatible with existing interface)
+    
+    Args:
+        symbol: Stock ticker symbol
+        start_date: Start date in 'YYYY-MM-DD' format
+        end_date: End date in 'YYYY-MM-DD' format
+        data_type: Type of data ('prices', 'news', 'financials', 'earnings', 'insider')
+    
+    Returns:
+        Formatted string with data
+    """
+    try:
+        start_dt = datetime.strptime(start_date, '%Y-%m-%d')
+        end_dt = datetime.strptime(end_date, '%Y-%m-%d')
+        
+        if data_type == 'prices':
+            df = fetch_financialdatasets_prices_cached(symbol, start_dt, end_dt)
+            title = f"financialdatasets.ai Price Data for {symbol}"
+            
+        elif data_type == 'news':
+            df = fetch_financialdatasets_news_cached(symbol, start_dt, end_dt)
+            title = f"financialdatasets.ai News for {symbol}"
+            
+        elif data_type == 'earnings':
+            df = fetch_financialdatasets_earnings_cached(symbol)
+            title = f"financialdatasets.ai Earnings Releases for {symbol}"
+            
+        elif data_type == 'insider':
+            df = fetch_financialdatasets_insider_trades_cached(symbol)
+            title = f"financialdatasets.ai Insider Trades for {symbol}"
+            
+        elif data_type == 'financials':
+            financials = fetch_financialdatasets_financials_cached(symbol)
+            result = f"## {symbol} Financial Statements from financialdatasets.ai:\n\n"
+            
+            for stmt_type, df in financials.items():
+                if not df.empty:
+                    result += f"### {stmt_type.replace('_', ' ').title()}:\n"
+                    result += df.to_string(index=False)
+                    result += "\n\n"
+            
+            return result if result != f"## {symbol} Financial Statements from financialdatasets.ai:\n\n" else f"No financial data found for {symbol}"
+        
+        else:
+            return f"Unknown data type: {data_type}"
+        
+        if df.empty:
+            return f"No {data_type} data found for {symbol} between {start_date} and {end_date}"
+        
+        # Format output
+        with pd.option_context('display.max_rows', None, 'display.max_columns', None, 'display.width', None):
+            df_string = df.to_string(index=False)
+        
+        return f"## {title} from {start_date} to {end_date}:\n\n{df_string}"
+        
+    except Exception as e:
+        logger.error(f"Failed to get cached financialdatasets.ai data: {e}")
+        return f"Error retrieving cached data for {symbol}: {e}"
 
 
 # Cache Management Functions

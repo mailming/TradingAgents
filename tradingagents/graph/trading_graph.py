@@ -115,6 +115,9 @@ class TradingAgentsGraph:
         return {
             "market": ToolNode(
                 [
+                    # Professional data sources (preferred) - financialdatasets.ai
+                    self.toolkit.get_financialdatasets_prices_cached,
+                    self.toolkit.get_financialdatasets_realtime_quote,
                     # cached tools (preferred)
                     self.toolkit.get_YFin_data_cached,
                     self.toolkit.get_YFin_data_window_cached,
@@ -137,6 +140,9 @@ class TradingAgentsGraph:
             ),
             "news": ToolNode(
                 [
+                    # Professional data sources (preferred) - financialdatasets.ai
+                    self.toolkit.get_financialdatasets_news_cached,
+                    self.toolkit.get_financialdatasets_earnings_cached,
                     # cached tools (preferred)
                     self.toolkit.get_finnhub_news_cached,
                     self.toolkit.get_google_news_cached,
@@ -150,6 +156,9 @@ class TradingAgentsGraph:
             ),
             "fundamentals": ToolNode(
                 [
+                    # Professional data sources (preferred) - financialdatasets.ai
+                    self.toolkit.get_financialdatasets_financials_cached,
+                    self.toolkit.get_financialdatasets_insider_trades_cached,
                     # online tools
                     self.toolkit.get_fundamentals_openai,
                     # offline tools

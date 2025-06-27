@@ -33,6 +33,17 @@ from .interface import (
     clear_cache_data,
 )
 
+# Import financialdatasets.ai functions directly from cached_api_wrappers
+from .cached_api_wrappers import (
+    fetch_financialdatasets_prices_cached,
+    fetch_financialdatasets_news_cached,
+    fetch_financialdatasets_financials_cached,
+    fetch_financialdatasets_earnings_cached,
+    fetch_financialdatasets_insider_trades_cached,
+    fetch_financialdatasets_realtime_quote,
+    get_financialdatasets_cached_data
+)
+
 __all__ = [
     # News and sentiment functions
     "get_finnhub_news",
@@ -59,4 +70,12 @@ __all__ = [
     "get_technical_indicators_cached",
     "get_cache_statistics",
     "clear_cache_data",
+    # financialdatasets.ai functions
+    "fetch_financialdatasets_prices_cached",
+    "fetch_financialdatasets_news_cached", 
+    "fetch_financialdatasets_financials_cached",
+    "fetch_financialdatasets_earnings_cached",
+    "fetch_financialdatasets_insider_trades_cached",
+    "fetch_financialdatasets_realtime_quote",
+    "get_financialdatasets_cached_data",
 ]

@@ -465,6 +465,157 @@ class Toolkit:
         cached_google_news = interface.get_google_news_cached(query, curr_date, look_back_days)
         return cached_google_news
 
+    # FINANCIALDATASETS.AI CACHED METHODS
+    
+    @staticmethod
+    @tool
+    def get_financialdatasets_prices_cached(
+        symbol: Annotated[str, "ticker symbol of the company"],
+        start_date: Annotated[str, "Start date in yyyy-mm-dd format"],
+        end_date: Annotated[str, "End date in yyyy-mm-dd format"],
+        interval: Annotated[str, "Time interval: 'day', 'minute', 'hour', etc."] = 'day',
+    ) -> str:
+        """
+        Retrieve high-quality stock price data from financialdatasets.ai with intelligent caching.
+        Provides OHLCV data for 30,000+ tickers with 30+ years of history.
+        Uses intelligent caching to minimize API calls and maximize performance.
+        Args:
+            symbol (str): Ticker symbol of the company, e.g. AAPL, TSLA
+            start_date (str): Start date in yyyy-mm-dd format
+            end_date (str): End date in yyyy-mm-dd format
+            interval (str): Time interval: 'day', 'minute', 'hour', etc., default is 'day'
+        Returns:
+            str: A formatted dataframe containing professional-grade stock price data from financialdatasets.ai.
+        """
+        from tradingagents.dataflows import get_financialdatasets_cached_data
+        result_data = get_financialdatasets_cached_data(symbol, start_date, end_date, 'prices')
+        return result_data
+
+    @staticmethod
+    @tool
+    def get_financialdatasets_news_cached(
+        ticker: Annotated[str, "ticker symbol for the company"],
+        start_date: Annotated[str, "Start date in yyyy-mm-dd format"],
+        end_date: Annotated[str, "End date in yyyy-mm-dd format"],
+    ) -> str:
+        """
+        Retrieve company-specific news from financialdatasets.ai with intelligent caching.
+        Provides real-time and historical news articles designed for AI financial agents.
+        Uses intelligent caching to reduce API calls and improve response time.
+        Args:
+            ticker (str): Ticker symbol for the company, e.g. AAPL, TSLA
+            start_date (str): Start date in yyyy-mm-dd format
+            end_date (str): End date in yyyy-mm-dd format
+        Returns:
+            str: A formatted string containing professional news data from financialdatasets.ai.
+        """
+        from tradingagents.dataflows import get_financialdatasets_cached_data
+        cached_news = get_financialdatasets_cached_data(ticker, start_date, end_date, 'news')
+        return cached_news
+
+    @staticmethod
+    @tool
+    def get_financialdatasets_financials_cached(
+        ticker: Annotated[str, "ticker symbol for the company"],
+        period: Annotated[str, "reporting period: 'annual', 'quarterly', or 'ttm'"] = 'annual',
+    ) -> str:
+        """
+        Retrieve comprehensive financial statements from financialdatasets.ai with intelligent caching.
+        Includes income statements, balance sheets, and cash flow statements.
+        Provides 30+ years of financial data for 30,000+ companies.
+        Args:
+            ticker (str): Ticker symbol for the company, e.g. AAPL, TSLA
+            period (str): Reporting period: 'annual', 'quarterly', or 'ttm' (trailing twelve months)
+        Returns:
+            str: A formatted string containing comprehensive financial statements from financialdatasets.ai.
+        """
+        from tradingagents.dataflows import get_financialdatasets_cached_data
+        # Use a 5-year range for financials
+        from datetime import datetime, timedelta
+        end_date = datetime.now().strftime('%Y-%m-%d')
+        start_date = (datetime.now() - timedelta(days=365*5)).strftime('%Y-%m-%d')
+        financials = get_financialdatasets_cached_data(ticker, start_date, end_date, 'financials')
+        return financials
+
+    @staticmethod
+    @tool
+    def get_financialdatasets_earnings_cached(
+        ticker: Annotated[str, "ticker symbol for the company"],
+    ) -> str:
+        """
+        Retrieve earnings press releases from financialdatasets.ai with intelligent caching.
+        Provides earnings-related press releases and announcements.
+        Updated instantly when new press releases are published via RSS feeds.
+        Args:
+            ticker (str): Ticker symbol for the company, e.g. AAPL, TSLA
+        Returns:
+            str: A formatted string containing earnings press releases from financialdatasets.ai.
+        """
+        from tradingagents.dataflows import get_financialdatasets_cached_data
+        # Use a 2-year range for earnings
+        from datetime import datetime, timedelta
+        end_date = datetime.now().strftime('%Y-%m-%d')
+        start_date = (datetime.now() - timedelta(days=365*2)).strftime('%Y-%m-%d')
+        earnings = get_financialdatasets_cached_data(ticker, start_date, end_date, 'earnings')
+        return earnings
+
+    @staticmethod
+    @tool
+    def get_financialdatasets_insider_trades_cached(
+        ticker: Annotated[str, "ticker symbol for the company"],
+    ) -> str:
+        """
+        Retrieve insider trading data from financialdatasets.ai with intelligent caching.
+        Provides corporate insider trading activity and holdings data.
+        Includes transaction details, insider names, and position changes.
+        Args:
+            ticker (str): Ticker symbol for the company, e.g. AAPL, TSLA
+        Returns:
+            str: A formatted string containing insider trading data from financialdatasets.ai.
+        """
+        from tradingagents.dataflows import get_financialdatasets_cached_data
+        # Use a 1-year range for insider trades
+        from datetime import datetime, timedelta
+        end_date = datetime.now().strftime('%Y-%m-%d')
+        start_date = (datetime.now() - timedelta(days=365)).strftime('%Y-%m-%d')
+        insider_trades = get_financialdatasets_cached_data(ticker, start_date, end_date, 'insider')
+        return insider_trades
+
+    @staticmethod
+    @tool
+    def get_financialdatasets_realtime_quote(
+        ticker: Annotated[str, "ticker symbol for the company"],
+    ) -> str:
+        """
+        Get real-time stock quote from financialdatasets.ai.
+        Provides current price, daily change, volume, and market cap data.
+        Not cached as this is real-time data that changes continuously.
+        Args:
+            ticker (str): Ticker symbol for the company, e.g. AAPL, TSLA
+        Returns:
+            str: A formatted string containing real-time quote data from financialdatasets.ai.
+        """
+        from tradingagents.dataflows import fetch_financialdatasets_realtime_quote
+        try:
+            quote = fetch_financialdatasets_realtime_quote(ticker)
+            if quote:
+                price = quote.get('price', 'N/A')
+                change = quote.get('day_change', 'N/A')
+                change_pct = quote.get('day_change_percent', 'N/A')
+                volume = quote.get('market_cap', 'N/A')
+                
+                return f"""## Real-time Quote for {ticker} from financialdatasets.ai:
+
+Current Price: ${price}
+Daily Change: {change} ({change_pct}%)
+Market Cap: {volume}
+
+Data Source: financialdatasets.ai (Professional Financial Data API)"""
+            else:
+                return f"No real-time quote available for {ticker}"
+        except Exception as e:
+            return f"Error retrieving real-time quote for {ticker}: {e}"
+
     @staticmethod
     @tool
     def get_stock_news_openai(
