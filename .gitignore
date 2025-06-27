@@ -56,3 +56,12 @@ src/
 eval_results/
 eval_data/
 *.egg-info/
+
+# Analysis Results (contains sensitive trading data)
+analysis_results/
+*.json
+*_results/
+# API Keys and sensitive files
+.env
+*.key
+api_keys.txt
