@@ -55,10 +55,12 @@ class AgentState(MessagesState):
 
     # research step
     market_report: Annotated[str, "Report from the Market Analyst"]
+    market_data_json: Annotated[dict, "Market data and technical indicators captured as JSON"]
     sentiment_report: Annotated[str, "Report from the Social Media Analyst"]
     news_report: Annotated[
         str, "Report from the News Researcher of current world affairs"
     ]
+    news_data_json: Annotated[dict, "News feed data captured as JSON"]
     fundamentals_report: Annotated[str, "Report from the Fundamentals Researcher"]
 
     # researcher team discussion step

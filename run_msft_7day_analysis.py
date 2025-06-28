@@ -183,14 +183,18 @@ def run_msft_daily_analysis(analysis_date):
                     "summary": "Market analysis completed with Claude AI technical indicators",
                     "indicators_used": ["SMA", "EMA", "MACD", "RSI", "Bollinger Bands", "ATR", "VWMA"],
                     "trend_analysis": "Claude AI assessed current market trends",
-                    "volatility_assessment": "Moderate volatility detected by AI analysis"
+                    "volatility_assessment": "Moderate volatility detected by AI analysis",
+                    "data_file": final_state.get("market_data_json", {}).get("data_file", "Not captured"),
+                    "data_summary": final_state.get("market_data_json", {}).get("data_summary", {})
                 },
                 "news_analysis": {
                     "status": "completed", 
                     "summary": "Claude AI news sentiment analysis completed",
                     "sentiment": "Mixed",
                     "key_headlines_analyzed": True,
-                    "ai_sentiment_score": 6.5
+                    "ai_sentiment_score": 6.5,
+                    "data_file": final_state.get("news_data_json", {}).get("data_file", "Not captured"),
+                    "data_summary": final_state.get("news_data_json", {}).get("data_summary", {})
                 },
                 "fundamental_analysis": {
                     "status": "completed",

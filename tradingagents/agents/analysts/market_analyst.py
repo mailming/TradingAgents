@@ -1,6 +1,9 @@
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 import time
 import json
+import uuid
+from datetime import datetime
+from pathlib import Path
 
 
 def create_market_analyst(llm, toolkit):
@@ -77,13 +80,113 @@ Volume-Based Indicators:
         result = chain.invoke(state["messages"])
 
         report = ""
+        market_data_json = {}
 
+        # Capture market data from tool calls and save to JSON
+        if len(result.tool_calls) > 0:
+            # Import here to avoid circular imports
+            try:
+                from tradingagents.dataflows.json_export_utils import create_exporter
+                
+                market_data_captured = {
+                    "price_data": None,
+                    "technical_indicators": None,
+                    "analysis_metadata": {
+                        "ticker": ticker,
+                        "analysis_date": current_date,
+                        "timestamp": datetime.now().isoformat(),
+                        "analyst_type": "market_analyst",
+                        "data_source": "yahoo_finance_stockstats",
+                        "tools_used": [tool.name for tool in tools]
+                    }
+                }
+                
+                # Execute tool calls and capture results
+                for tool_call in result.tool_calls:
+                    try:
+                        # Find the corresponding tool
+                        tool_func = None
+                        for tool in tools:
+                            if tool.name == tool_call["name"]:
+                                tool_func = tool
+                                break
+                        
+                        if tool_func:
+                            # Execute the tool and capture result
+                            tool_result = tool_func.invoke(tool_call["args"])
+                            
+                            if tool_call["name"] in ["get_YFin_data", "get_YFin_data_online"]:
+                                # Process price data
+                                if hasattr(tool_result, 'to_dict'):
+                                    market_data_captured["price_data"] = {
+                                        "data": tool_result.to_dict(),
+                                        "tool_used": tool_call["name"],
+                                        "parameters": tool_call["args"]
+                                    }
+                                else:
+                                    market_data_captured["price_data"] = {
+                                        "data": str(tool_result),
+                                        "tool_used": tool_call["name"],
+                                        "parameters": tool_call["args"]
+                                    }
+                            
+                            elif "indicators" in tool_call["name"]:
+                                # Process technical indicators
+                                if hasattr(tool_result, 'to_dict'):
+                                    market_data_captured["technical_indicators"] = {
+                                        "data": tool_result.to_dict(),
+                                        "tool_used": tool_call["name"],
+                                        "parameters": tool_call["args"]
+                                    }
+                                else:
+                                    market_data_captured["technical_indicators"] = {
+                                        "data": str(tool_result),
+                                        "tool_used": tool_call["name"],
+                                        "parameters": tool_call["args"]
+                                    }
+                    
+                    except Exception as e:
+                        print(f"Warning: Could not capture data from tool {tool_call['name']}: {e}")
+                        market_data_captured[f"{tool_call['name']}_error"] = str(e)
+                
+                # Save market data to JSON using ZZSheep exporter
+                try:
+                    exporter = create_exporter()
+                    analysis_id = str(uuid.uuid4())[:8]
+                    filename = f"{ticker}_{current_date}_{analysis_id}_market_data.json"
+                    
+                    json_path = exporter.save_analysis_results(
+                        market_data_captured,
+                        ticker=ticker,
+                        analysis_type="market_data_capture",
+                        custom_filename=filename
+                    )
+                    
+                    market_data_json = {
+                        "data_file": str(json_path),
+                        "captured_at": datetime.now().isoformat(),
+                        "data_summary": {
+                            "has_price_data": market_data_captured["price_data"] is not None,
+                            "has_indicators": market_data_captured["technical_indicators"] is not None,
+                            "tools_executed": len(result.tool_calls)
+                        }
+                    }
+                    
+                except Exception as e:
+                    print(f"Warning: Could not save market data to JSON: {e}")
+                    market_data_json = {"error": f"Failed to save: {e}"}
+                    
+            except ImportError as e:
+                print(f"Warning: Could not import JSON export utility: {e}")
+                market_data_json = {"error": "JSON export utility not available"}
+        
         if len(result.tool_calls) == 0:
             report = result.content
        
         return {
             "messages": [result],
             "market_report": report,
+            "market_data_json": market_data_json,
         }
 
     return market_analyst_node

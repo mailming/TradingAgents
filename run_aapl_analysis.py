@@ -115,12 +115,16 @@ def run_aapl_analysis():
                 "market_analysis": {
                     "status": "completed",
                     "summary": "Market analysis completed with technical indicators",
-                    "indicators_used": ["SMA", "EMA", "MACD", "RSI", "Bollinger Bands", "ATR", "VWMA"]
+                    "indicators_used": ["SMA", "EMA", "MACD", "RSI", "Bollinger Bands", "ATR", "VWMA"],
+                    "data_file": final_state.get("market_data_json", {}).get("data_file", "Not captured"),
+                    "data_summary": final_state.get("market_data_json", {}).get("data_summary", {})
                 },
                 "news_analysis": {
                     "status": "completed",
                     "summary": "News sentiment analysis completed",
-                    "sentiment": "Mixed"
+                    "sentiment": "Mixed",
+                    "data_file": final_state.get("news_data_json", {}).get("data_file", "Not captured"),
+                    "data_summary": final_state.get("news_data_json", {}).get("data_summary", {})
                 },
                 "fundamental_analysis": {
                     "status": "completed",
