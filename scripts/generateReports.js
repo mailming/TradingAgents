@@ -1,9 +1,32 @@
-<!DOCTYPE html>
+#!/usr/bin/env node
+
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Import the stock data
+const stockDataPath = path.join(__dirname, '../src/data/stockAnalysis.js');
+const stockDataContent = fs.readFileSync(stockDataPath, 'utf8');
+
+// Extract stockData object from the file
+const stockDataMatch = stockDataContent.match(/export const stockData = ({[\s\S]*?});/);
+if (!stockDataMatch) {
+    console.error('Could not extract stockData from file');
+    process.exit(1);
+}
+
+const stockData = eval(`(${stockDataMatch[1]})`);
+
+function generateReportHTML(stock) {
+    return `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Apple Inc. (AAPL) Comprehensive Analysis | zzsheepTrader</title>
+    <title>${stock.companyName} (${stock.ticker}) Comprehensive Analysis | zzsheepTrader</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
@@ -398,54 +421,54 @@
         <div class="report-header">
             <div class="stock-info">
                 <div class="stock-details">
-                    <h1>AAPL</h1>
-                    <div class="stock-subtitle">Apple Inc. - Comprehensive Analysis Report</div>
-                    <div class="stock-subtitle">Analysis Date: June 27, 2025 • Analysis ID: f7d8e5a9</div>
+                    <h1>${stock.ticker}</h1>
+                    <div class="stock-subtitle">${stock.companyName} - Comprehensive Analysis Report</div>
+                    <div class="stock-subtitle">Analysis Date: ${stock.analysisDate} • Analysis ID: ${stock.analysisId}</div>
                 </div>
-                <div class="recommendation-badge buy">
-                    <i class="fas fa-arrow-up"></i>
-                    BUY
+                <div class="recommendation-badge ${stock.recommendation.style}">
+                    <i class="${stock.recommendation.icon}"></i>
+                    ${stock.recommendation.type}
                 </div>
             </div>
 
             <div class="key-metrics">
                 <div class="metric-card">
-                    <div class="metric-value">$196.89</div>
+                    <div class="metric-value">${stock.marketData.currentPrice}</div>
                     <div class="metric-label">Current Price</div>
                 </div>
                 <div class="metric-card">
-                    <div class="metric-value">+1.67%</div>
+                    <div class="metric-value">${stock.marketData.dailyChange}</div>
                     <div class="metric-label">Daily Change</div>
                 </div>
                 <div class="metric-card">
-                    <div class="metric-value">4.5/10</div>
+                    <div class="metric-value">${stock.metrics.riskScore}/10</div>
                     <div class="metric-label">Risk Score</div>
                 </div>
                 <div class="metric-card">
-                    <div class="metric-value">$3.01T</div>
+                    <div class="metric-value">${stock.marketData.marketCap}</div>
                     <div class="metric-label">Market Cap</div>
                 </div>
             </div>
         </div>
 
-        
+        ${stock.recommendation.type === 'BUY' ? `
         <!-- Executive Summary -->
         <div class="analysis-section">
             <h2 class="section-title">
                 <div class="section-icon"><i class="fas fa-star"></i></div>
-                Executive Summary & BUY Recommendation
+                Executive Summary & ${stock.recommendation.type} Recommendation
             </h2>
             <div class="buy-summary">
                 <h3>
                     <i class="fas fa-thumbs-up"></i>
-                    Strong BUY Recommendation
+                    Strong ${stock.recommendation.type} Recommendation
                 </h3>
                 <p>
-                    <strong>Apple Inc. (AAPL)</strong> presents a compelling investment opportunity with strong fundamentals and positive growth outlook.
+                    <strong>${stock.companyName} (${stock.ticker})</strong> presents a compelling investment opportunity with strong fundamentals and positive growth outlook.
                 </p>
             </div>
         </div>
-        
+        ` : ''}
 
         <!-- Market & Technical Analysis Section -->
         <div class="analysis-section">
@@ -456,22 +479,22 @@
             <div class="analysis-grid">
                 <div class="analysis-card">
                     <div class="card-title">Technical Indicators</div>
-                    <p><strong>Status:</strong> <span class="status-completed">Completed</span></p>
-                    <p><strong>Trend:</strong> Bullish</p>
-                    <p><strong>Momentum:</strong> Strong</p>
-                    <p><strong>Volume:</strong> High</p>
-                    <p><strong>Volatility:</strong> Low</p>
+                    <p><strong>Status:</strong> <span class="status-completed">${stock.technicalAnalysis.status}</span></p>
+                    <p><strong>Trend:</strong> ${stock.technicalAnalysis.trend}</p>
+                    <p><strong>Momentum:</strong> ${stock.technicalAnalysis.momentum}</p>
+                    <p><strong>Volume:</strong> ${stock.marketData.volume}</p>
+                    <p><strong>Volatility:</strong> ${stock.marketData.volatility}</p>
                     <div class="tag-list">
-                        <span class="tag">SMA</span><span class="tag">EMA</span><span class="tag">MACD</span><span class="tag">RSI</span><span class="tag">Bollinger Bands</span><span class="tag">ATR</span><span class="tag">VWMA</span>
+                        ${stock.technicalAnalysis.indicators.map(indicator => `<span class="tag">${indicator}</span>`).join('')}
                     </div>
                 </div>
                 <div class="analysis-card">
                     <div class="card-title">Price Levels & Performance</div>
-                    <p><strong>Current Price:</strong> $196.89</p>
-                    <p><strong>Daily Change:</strong> +1.67%</p>
-                    <p><strong>Market Cap:</strong> $3.01T</p>
-                    <p><strong>Support Level:</strong> $190</p>
-                    <p><strong>Resistance Level:</strong> $205</p>
+                    <p><strong>Current Price:</strong> ${stock.marketData.currentPrice}</p>
+                    <p><strong>Daily Change:</strong> ${stock.marketData.dailyChange}</p>
+                    <p><strong>Market Cap:</strong> ${stock.marketData.marketCap}</p>
+                    <p><strong>Support Level:</strong> ${stock.technicalAnalysis.supportLevel}</p>
+                    <p><strong>Resistance Level:</strong> ${stock.technicalAnalysis.resistanceLevel}</p>
                 </div>
             </div>
         </div>
@@ -485,18 +508,18 @@
             <div class="analysis-grid">
                 <div class="analysis-card">
                     <div class="card-title">Key Metrics</div>
-                    <p><strong>Status:</strong> <span class="status-completed">Completed</span></p>
-                    <p><strong>Sector:</strong> Technology</p>
-                    <p>Comprehensive fundamental analysis covering Apple's financial health, ecosystem strength, and growth prospects in services and emerging technologies like AI, health, and AR/VR.</p>
+                    <p><strong>Status:</strong> <span class="status-completed">${stock.fundamentalAnalysis.status}</span></p>
+                    <p><strong>Sector:</strong> ${stock.sector}</p>
+                    <p>${stock.fundamentalAnalysis.description}</p>
                     <div class="tag-list">
-                        <span class="tag">Services Growth</span><span class="tag">Ecosystem Strength</span><span class="tag">Innovation Pipeline</span><span class="tag">Brand Loyalty</span>
+                        ${stock.fundamentalAnalysis.keyMetrics.map(metric => `<span class="tag">${metric}</span>`).join('')}
                     </div>
                 </div>
                 <div class="analysis-card">
                     <div class="card-title">Market Sentiment</div>
-                    <p><strong>Status:</strong> <span class="status-completed">Completed</span></p>
-                    <p><strong>Overall Sentiment:</strong> Very Positive</p>
-                    <p>Market sentiment analysis reflects current investor confidence and outlook for Apple Inc.'s strategic initiatives and market position.</p>
+                    <p><strong>Status:</strong> <span class="status-completed">${stock.fundamentalAnalysis.status}</span></p>
+                    <p><strong>Overall Sentiment:</strong> ${stock.fundamentalAnalysis.sentiment}</p>
+                    <p>Market sentiment analysis reflects current investor confidence and outlook for ${stock.companyName}'s strategic initiatives and market position.</p>
                 </div>
             </div>
         </div>
@@ -510,20 +533,20 @@
             <div class="analysis-grid">
                 <div class="analysis-card">
                     <div class="card-title">Risk Profile</div>
-                    <p><strong>Overall Risk:</strong> Low-Moderate</p>
+                    <p><strong>Overall Risk:</strong> ${stock.riskAssessment.overallRisk}</p>
                     <div class="risk-indicator">
                         <span>Risk Score:</span>
-                        <div class="risk-score medium">4.5/10</div>
+                        <div class="risk-score ${stock.metrics.riskScore <= 4 ? 'low' : stock.metrics.riskScore <= 7 ? 'medium' : 'high'}">${stock.metrics.riskScore}/10</div>
                     </div>
                     <div class="tag-list">
-                        <span class="tag risk-tag">Market volatility</span><span class="tag risk-tag">Supply chain risks</span><span class="tag risk-tag">Competition intensity</span><span class="tag risk-tag">Regulatory concerns</span>
+                        ${stock.riskAssessment.riskFactors.map(factor => `<span class="tag risk-tag">${factor}</span>`).join('')}
                     </div>
                 </div>
                 <div class="analysis-card">
                     <div class="card-title">Risk Mitigation</div>
                     <p>Recommended strategies to manage investment risk:</p>
                     <ul style="margin-top: 1rem; color: var(--text-secondary); line-height: 1.8; padding-left: 1rem;">
-                        <li>Diversification across tech sector</li><li>Appropriate position sizing</li><li>Stop-loss level implementation</li><li>Regular monitoring of ecosystem metrics</li>
+                        ${stock.riskAssessment.mitigation.map(strategy => `<li>${strategy}</li>`).join('')}
                     </ul>
                 </div>
             </div>
@@ -541,18 +564,18 @@
                         <i class="fas fa-arrow-up"></i>
                         Bull Case
                     </div>
-                    <p>Strong brand loyalty and ecosystem strength with robust services growth. Apple's innovation in AI, health technology, and AR/VR provides significant competitive advantages and new revenue streams with expanding global market presence.</p>
+                    <p>${stock.investmentDebate.bullCase}</p>
                 </div>
                 <div class="bear-case">
                     <div class="case-title">
                         <i class="fas fa-arrow-down"></i>
                         Bear Case
                     </div>
-                    <p>Market saturation and competition risks in core iPhone business. Regulatory concerns and potential antitrust challenges to App Store and services revenue model may impact future growth.</p>
+                    <p>${stock.investmentDebate.bearCase}</p>
                 </div>
             </div>
             <div class="consensus-box">
-                <strong>Consensus:</strong> Growth potential outweighs risks - strong ecosystem and services expansion justify investment with continued innovation leadership.
+                <strong>Consensus:</strong> ${stock.investmentDebate.consensus}
             </div>
         </div>
 
@@ -566,19 +589,19 @@
                 <div class="analysis-card">
                     <div class="card-title">Immediate Actions</div>
                     <ul style="color: var(--text-secondary); line-height: 1.8; margin-top: 1rem; padding-left: 1rem;">
-                        <li>Monitor iPhone sales trends</li><li>Track services revenue growth</li><li>Watch supply chain developments</li>
+                        ${stock.strategicActions.immediate.map(action => `<li>${action}</li>`).join('')}
                     </ul>
                 </div>
                 <div class="analysis-card">
                     <div class="card-title">Medium-term Actions</div>
                     <ul style="color: var(--text-secondary); line-height: 1.8; margin-top: 1rem; padding-left: 1rem;">
-                        <li>Assess ecosystem expansion progress</li><li>Review market share metrics</li><li>Evaluate innovation pipeline</li>
+                        ${stock.strategicActions.mediumTerm.map(action => `<li>${action}</li>`).join('')}
                     </ul>
                 </div>
                 <div class="analysis-card">
                     <div class="card-title">Key Monitoring Metrics</div>
                     <div class="tag-list">
-                        <span class="tag">iPhone unit sales</span><span class="tag">Services revenue</span><span class="tag">Market share trends</span><span class="tag">Customer loyalty metrics</span>
+                        ${stock.strategicActions.monitoring.map(metric => `<span class="tag">${metric}</span>`).join('')}
                     </div>
                 </div>
             </div>
@@ -593,20 +616,42 @@
             <div class="analysis-grid">
                 <div class="analysis-card">
                     <div class="card-title">Analysis Quality</div>
-                    <p><strong>Data Source:</strong> financialdatasets.ai</p>
-                    <p><strong>Data Quality:</strong> Professional</p>
-                    <p><strong>Reliability Score:</strong> 95%</p>
-                    <p><strong>Cost Efficiency:</strong> Optimized</p>
+                    <p><strong>Data Source:</strong> ${stock.metrics.dataSource}</p>
+                    <p><strong>Data Quality:</strong> ${stock.analysisQuality.dataQuality}</p>
+                    <p><strong>Reliability Score:</strong> ${stock.analysisQuality.reliabilityScore}</p>
+                    <p><strong>Cost Efficiency:</strong> ${stock.analysisQuality.costEfficiency}</p>
                 </div>
                 <div class="analysis-card">
                     <div class="card-title">Technical Details</div>
-                    <p><strong>Analysis Version:</strong> 1.0</p>
-                    <p><strong>Timestamp:</strong> 2025-06-27T18:10:25.567890</p>
-                    <p><strong>Processing Time:</strong> 82.3s</p>
-                    <p><strong>AI Model:</strong> GPT-4o-Mini</p>
+                    <p><strong>Analysis Version:</strong> ${stock.analysisQuality.version}</p>
+                    <p><strong>Timestamp:</strong> ${stock.timestamp}</p>
+                    <p><strong>Processing Time:</strong> ${stock.metrics.duration}</p>
+                    <p><strong>AI Model:</strong> ${stock.metrics.aiModel}</p>
                 </div>
             </div>
         </div>
     </div>
 </body>
-</html>
+</html>`;
+}
+
+// Generate reports for all stocks
+const reportsDir = path.join(__dirname, '../reports');
+
+// Create reports directory if it doesn't exist
+if (!fs.existsSync(reportsDir)) {
+    fs.mkdirSync(reportsDir, { recursive: true });
+}
+
+// Generate a report for each stock
+Object.keys(stockData).forEach(ticker => {
+    const stock = stockData[ticker];
+    const htmlContent = generateReportHTML(stock);
+    const fileName = `${ticker.toLowerCase()}_comprehensive_report.html`;
+    const filePath = path.join(reportsDir, fileName);
+    
+    fs.writeFileSync(filePath, htmlContent);
+    console.log(`✅ Generated ${fileName}`);
+});
+
+console.log(`\n🎉 Successfully generated ${Object.keys(stockData).length} comprehensive reports!`); 

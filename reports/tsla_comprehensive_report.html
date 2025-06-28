@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tesla (TSLA) Comprehensive Analysis | zzsheepTrader</title>
+    <title>Tesla, Inc. (TSLA) Comprehensive Analysis | zzsheepTrader</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
@@ -127,9 +127,24 @@
             display: flex;
             align-items: center;
             gap: 0.5rem;
+        }
+
+        .recommendation-badge.buy {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--buy-color);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .recommendation-badge.hold {
             background: rgba(245, 158, 11, 0.1);
             color: var(--hold-color);
             border: 1px solid rgba(245, 158, 11, 0.3);
+        }
+
+        .recommendation-badge.sell {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--sell-color);
+            border: 1px solid rgba(239, 68, 68, 0.3);
         }
 
         .key-metrics {
@@ -220,6 +235,12 @@
             border: 1px solid rgba(102, 126, 234, 0.3);
         }
 
+        .risk-tag {
+            background: rgba(245, 158, 11, 0.2);
+            color: var(--warning-color);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+        }
+
         .risk-indicator {
             display: flex;
             align-items: center;
@@ -228,11 +249,22 @@
         }
 
         .risk-score {
-            background: var(--warning-color);
             color: white;
             padding: 0.5rem 1rem;
             border-radius: 20px;
             font-weight: 600;
+        }
+
+        .risk-score.low {
+            background: var(--success-color);
+        }
+
+        .risk-score.medium {
+            background: var(--warning-color);
+        }
+
+        .risk-score.high {
+            background: var(--danger-color);
         }
 
         .debate-section {
@@ -298,6 +330,30 @@
             font-weight: 600;
         }
 
+        .buy-summary {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            padding: 2rem;
+            border-radius: 12px;
+            margin-top: 1.5rem;
+        }
+
+        .buy-summary h3 {
+            color: var(--buy-color);
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .consensus-box {
+            margin-top: 1.5rem;
+            padding: 1rem;
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+
         @media (max-width: 768px) {
             .stock-info {
                 flex-direction: column;
@@ -310,6 +366,10 @@
 
             .main-container {
                 padding: 1rem;
+            }
+
+            .analysis-grid {
+                grid-template-columns: 1fr;
             }
         }
     </style>
@@ -342,7 +402,7 @@
                     <div class="stock-subtitle">Tesla, Inc. - Comprehensive Analysis Report</div>
                     <div class="stock-subtitle">Analysis Date: June 27, 2025 • Analysis ID: c850a0ea</div>
                 </div>
-                <div class="recommendation-badge">
+                <div class="recommendation-badge hold">
                     <i class="fas fa-pause"></i>
                     HOLD
                 </div>
@@ -368,7 +428,9 @@
             </div>
         </div>
 
-        <!-- Market Analysis Section -->
+        
+
+        <!-- Market & Technical Analysis Section -->
         <div class="analysis-section">
             <h2 class="section-title">
                 <div class="section-icon"><i class="fas fa-chart-line"></i></div>
@@ -383,19 +445,13 @@
                     <p><strong>Volume:</strong> High</p>
                     <p><strong>Volatility:</strong> Moderate</p>
                     <div class="tag-list">
-                        <span class="tag">SMA</span>
-                        <span class="tag">EMA</span>
-                        <span class="tag">MACD</span>
-                        <span class="tag">RSI</span>
-                        <span class="tag">Bollinger Bands</span>
-                        <span class="tag">ATR</span>
-                        <span class="tag">VWMA</span>
+                        <span class="tag">SMA</span><span class="tag">EMA</span><span class="tag">MACD</span><span class="tag">RSI</span><span class="tag">Bollinger Bands</span><span class="tag">ATR</span><span class="tag">VWMA</span>
                     </div>
                 </div>
                 <div class="analysis-card">
-                    <div class="card-title">Price Levels</div>
+                    <div class="card-title">Price Levels & Performance</div>
                     <p><strong>Current Price:</strong> $323.79</p>
-                    <p><strong>Daily Change:</strong> -$2.77 (-0.85%)</p>
+                    <p><strong>Daily Change:</strong> -0.85%</p>
                     <p><strong>Market Cap:</strong> $1.04T</p>
                     <p><strong>Support Level:</strong> $320</p>
                     <p><strong>Resistance Level:</strong> $350</p>
@@ -403,8 +459,114 @@
             </div>
         </div>
 
-        <!-- Other sections truncated for brevity -->
-        
+        <!-- Fundamental Analysis Section -->
+        <div class="analysis-section">
+            <h2 class="section-title">
+                <div class="section-icon"><i class="fas fa-building"></i></div>
+                Fundamental Analysis
+            </h2>
+            <div class="analysis-grid">
+                <div class="analysis-card">
+                    <div class="card-title">Key Metrics</div>
+                    <p><strong>Status:</strong> <span class="status-completed">Completed</span></p>
+                    <p><strong>Sector:</strong> Automotive/Energy</p>
+                    <p>Comprehensive fundamental analysis covering Tesla's financial health, market leadership in electric vehicles and energy storage, and growth prospects in autonomous driving technology.</p>
+                    <div class="tag-list">
+                        <span class="tag">EV Market Leadership</span><span class="tag">Energy Storage Growth</span><span class="tag">Autonomous Driving</span><span class="tag">Manufacturing Scale</span>
+                    </div>
+                </div>
+                <div class="analysis-card">
+                    <div class="card-title">Market Sentiment</div>
+                    <p><strong>Status:</strong> <span class="status-completed">Completed</span></p>
+                    <p><strong>Overall Sentiment:</strong> Mixed</p>
+                    <p>Market sentiment analysis reflects current investor confidence and outlook for Tesla, Inc.'s strategic initiatives and market position.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Risk Assessment Section -->
+        <div class="analysis-section">
+            <h2 class="section-title">
+                <div class="section-icon"><i class="fas fa-shield-alt"></i></div>
+                Risk Assessment
+            </h2>
+            <div class="analysis-grid">
+                <div class="analysis-card">
+                    <div class="card-title">Risk Profile</div>
+                    <p><strong>Overall Risk:</strong> Moderate</p>
+                    <div class="risk-indicator">
+                        <span>Risk Score:</span>
+                        <div class="risk-score medium">6.5/10</div>
+                    </div>
+                    <div class="tag-list">
+                        <span class="tag risk-tag">Market volatility</span><span class="tag risk-tag">Regulatory scrutiny</span><span class="tag risk-tag">Competition intensity</span><span class="tag risk-tag">Macroeconomic conditions</span>
+                    </div>
+                </div>
+                <div class="analysis-card">
+                    <div class="card-title">Risk Mitigation</div>
+                    <p>Recommended strategies to manage investment risk:</p>
+                    <ul style="margin-top: 1rem; color: var(--text-secondary); line-height: 1.8; padding-left: 1rem;">
+                        <li>Diversification across EV sector</li><li>Appropriate position sizing</li><li>Stop-loss level implementation</li><li>Regular monitoring of key metrics</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Investment Debate Section -->
+        <div class="analysis-section">
+            <h2 class="section-title">
+                <div class="section-icon"><i class="fas fa-balance-scale"></i></div>
+                Investment Debate Analysis
+            </h2>
+            <div class="debate-section">
+                <div class="bull-case">
+                    <div class="case-title">
+                        <i class="fas fa-arrow-up"></i>
+                        Bull Case
+                    </div>
+                    <p>Strong growth potential and market leadership in electric vehicles and energy storage. Tesla's innovation in autonomous driving and energy solutions provides significant competitive advantages with expanding global market presence.</p>
+                </div>
+                <div class="bear-case">
+                    <div class="case-title">
+                        <i class="fas fa-arrow-down"></i>
+                        Bear Case
+                    </div>
+                    <p>Competition risks from traditional automakers and new EV entrants. Regulatory challenges and concerns about valuation premiums in a maturing EV market with increasing price competition.</p>
+                </div>
+            </div>
+            <div class="consensus-box">
+                <strong>Consensus:</strong> Balanced approach warranted - monitor competitive dynamics and regulatory developments while assessing autonomous driving progress.
+            </div>
+        </div>
+
+        <!-- Strategic Actions Section -->
+        <div class="analysis-section">
+            <h2 class="section-title">
+                <div class="section-icon"><i class="fas fa-tasks"></i></div>
+                Strategic Actions & Monitoring
+            </h2>
+            <div class="analysis-grid">
+                <div class="analysis-card">
+                    <div class="card-title">Immediate Actions</div>
+                    <ul style="color: var(--text-secondary); line-height: 1.8; margin-top: 1rem; padding-left: 1rem;">
+                        <li>Monitor quarterly earnings reports</li><li>Track regulatory developments</li><li>Watch competitive landscape changes</li>
+                    </ul>
+                </div>
+                <div class="analysis-card">
+                    <div class="card-title">Medium-term Actions</div>
+                    <ul style="color: var(--text-secondary); line-height: 1.8; margin-top: 1rem; padding-left: 1rem;">
+                        <li>Assess market position changes</li><li>Review fundamental metrics trends</li><li>Evaluate autonomous driving progress</li>
+                    </ul>
+                </div>
+                <div class="analysis-card">
+                    <div class="card-title">Key Monitoring Metrics</div>
+                    <div class="tag-list">
+                        <span class="tag">EV delivery numbers</span><span class="tag">Energy business growth</span><span class="tag">Autonomous driving milestones</span><span class="tag">Market share trends</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Performance Metrics Section -->
         <div class="analysis-section">
             <h2 class="section-title">
@@ -422,12 +584,12 @@
                 <div class="analysis-card">
                     <div class="card-title">Technical Details</div>
                     <p><strong>Analysis Version:</strong> 1.0</p>
-                    <p><strong>Timestamp:</strong> 2025-06-27T15:07:04</p>
-                    <p><strong>Processing Time:</strong> 77.9 seconds</p>
+                    <p><strong>Timestamp:</strong> 2025-06-27T15:07:04.069885</p>
+                    <p><strong>Processing Time:</strong> 77.9s</p>
                     <p><strong>AI Model:</strong> Claude-3-Haiku-20240307</p>
                 </div>
             </div>
         </div>
     </div>
 </body>
-</html> 
+</html>
