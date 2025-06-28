@@ -19,6 +19,7 @@ import calendar
 
 from tradingagents.graph.trading_graph import TradingAgentsGraph
 from tradingagents.default_config import DEFAULT_CONFIG
+from tradingagents.dataflows.json_export_utils import create_exporter, save_multi_day_to_zzsheep
 
 
 def is_trading_day(date):
@@ -276,26 +277,25 @@ def run_msft_daily_analysis(analysis_date):
 
 
 def save_daily_analysis_results(results, analysis_date):
-    """Save daily analysis results in JSON format"""
+    """Save daily analysis results in JSON format to zzsheepTrader project"""
     
-    # Create directories
-    output_dir = Path("analysis_results") 
-    json_dir = output_dir / "msft_7day_claude"
-    json_dir.mkdir(parents=True, exist_ok=True)
+    # Create ZZSheep exporter
+    exporter = create_exporter()
     
-    # Create filename
+    # Create filename with Claude identifier
     ticker = results["analysis_metadata"]["ticker"]
     date_str = analysis_date.strftime("%Y-%m-%d")
     analysis_id = results["analysis_metadata"]["analysis_id"]
-    
     filename = f"{ticker}_{date_str}_{analysis_id}_claude.json"
-    json_path = json_dir / filename
     
-    # Save JSON
-    with open(json_path, 'w', encoding='utf-8') as f:
-        json.dump(results, f, indent=2, ensure_ascii=False)
+    # Save using ZZSheep exporter
+    json_path = exporter.save_analysis_results(
+        results,
+        ticker=ticker,
+        analysis_type="daily_claude_analysis",
+        custom_filename=filename
+    )
     
-    print(f"📁 Saved: {json_path}")
     return json_path
 
 
@@ -351,7 +351,7 @@ def run_msft_7day_analysis():
             time.sleep(2)
     
     # Create summary report
-    create_summary_report(results_summary, trading_days)
+    summary_path = create_summary_report(results_summary, trading_days)
     
     print("🎉 MSFT 7-Day Analysis Complete!")
     print("=" * 50)
@@ -360,13 +360,14 @@ def run_msft_7day_analysis():
     print(f"🧠 AI Model: Claude-3.5-Sonnet (Anthropic)")
     print(f"📡 Data Source: financialdatasets.ai")
     print()
-    print("📁 Files saved in: analysis_results/msft_7day_claude/")
+    print("📁 Files saved to: zzsheepTrader/analysis_results/json/")
+    print("🌐 Ready for frontend consumption in zzsheepTrader project!")
     
     return results_summary, saved_files
 
 
 def create_summary_report(results_summary, trading_days):
-    """Create a summary report of all analyses"""
+    """Create a summary report of all analyses and save to zzsheepTrader project"""
     
     summary_data = {
         "summary_metadata": {
@@ -400,14 +401,18 @@ def create_summary_report(results_summary, trading_days):
         }
     }
     
-    # Save summary
-    output_dir = Path("analysis_results") / "msft_7day_claude"
-    summary_path = output_dir / f"MSFT_7day_summary_{datetime.now().strftime('%Y%m%d_%H%M%S')}_claude.json"
+    # Save summary using ZZSheep exporter
+    exporter = create_exporter()
+    summary_filename = f"MSFT_7day_summary_{datetime.now().strftime('%Y%m%d_%H%M%S')}_claude.json"
     
-    with open(summary_path, 'w', encoding='utf-8') as f:
-        json.dump(summary_data, f, indent=2, ensure_ascii=False)
+    summary_path = exporter.save_analysis_results(
+        summary_data,
+        ticker="MSFT",
+        analysis_type="7day_claude_summary",
+        custom_filename=summary_filename
+    )
     
-    print(f"📋 Summary report saved: {summary_path}")
+    return summary_path
 
 
 if __name__ == "__main__":

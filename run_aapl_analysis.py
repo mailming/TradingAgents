@@ -17,6 +17,7 @@ import uuid
 
 from tradingagents.graph.trading_graph import TradingAgentsGraph
 from tradingagents.default_config import DEFAULT_CONFIG
+from tradingagents.dataflows.json_export_utils import save_to_zzsheep
 
 
 def run_aapl_analysis():
@@ -188,8 +189,8 @@ def run_aapl_analysis():
             }
         }
         
-        # Save results
-        save_analysis_results(structured_results)
+        # Save results to zzsheepTrader project
+        saved_path = save_to_zzsheep(structured_results, ticker="AAPL", analysis_type="aapl_analysis")
         
         print()
         print("🎉 AAPL Analysis Complete!")
@@ -207,31 +208,9 @@ def run_aapl_analysis():
         return None
 
 
-def save_analysis_results(results):
-    """Save analysis results in JSON format"""
-    
-    # Create directories
-    output_dir = Path("analysis_results")
-    json_dir = output_dir / "json"
-    json_dir.mkdir(parents=True, exist_ok=True)
-    
-    # Create filename
-    timestamp = results["analysis_metadata"]["timestamp"]
-    ticker = results["analysis_metadata"]["ticker"]
-    analysis_id = results["analysis_metadata"]["analysis_id"]
-    
-    filename_base = f"{ticker}_{timestamp[:10]}_{timestamp[11:19].replace(':', '-')}_{analysis_id}"
-    json_path = json_dir / f"{filename_base}.json"
-    
-    # Save JSON
-    with open(json_path, 'w', encoding='utf-8') as f:
-        json.dump(results, f, indent=2, ensure_ascii=False)
-    
-    print()
-    print("📁 Analysis Results Saved:")
-    print(f"   📄 JSON: {json_path}")
-    print(f"   🌐 Load in dashboard: standalone_dashboard.html")
-    print(f"   🔗 API endpoint: /api/analyses/latest")
+# Old save function removed - now using ZZSheep JSON exporter
+# Results are automatically saved to zzsheepTrader/analysis_results/json/
+# for frontend consumption
 
 
 if __name__ == "__main__":
@@ -242,8 +221,9 @@ if __name__ == "__main__":
     
     if results:
         print()
-        print("✅ Success! AAPL analysis complete and saved.")
+        print("✅ Success! AAPL analysis complete and saved to zzsheepTrader.")
         print("🎯 Ready for frontend consumption and decision making.")
+        print("🌐 Results available in zzsheepTrader/analysis_results/json/")
     else:
         print()
         print("❌ Analysis failed. Please check the error messages above.") 
