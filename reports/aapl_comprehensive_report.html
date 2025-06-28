@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Apple (AAPL) Comprehensive Analysis | zzsheepTrader</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #667eea;
+            --primary-light: #764ba2;
+            --bg-primary: #1a1a3a;
+            --bg-secondary: #2d2d5a;
+            --bg-card: #353575;
+            --text-primary: #ffffff;
+            --text-secondary: #b8b8d1;
+            --border-color: #4a4a7a;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --danger-color: #ef4444;
+            --hold-color: #f59e0b;
+            --buy-color: #10b981;
+            --sell-color: #ef4444;
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: var(--text-primary);
+            background: var(--bg-primary);
+            min-height: 100vh;
+        }
+
+        .header {
+            background: rgba(26, 26, 58, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 1rem 0;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .header-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            text-decoration: none;
+        }
+
+        .logo-icon {
+            font-size: 2rem;
+        }
+
+        .nav-link {
+            color: var(--text-secondary);
+            text-decoration: none;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .nav-link:hover, .nav-link.active {
+            color: var(--text-primary);
+            background: rgba(102, 126, 234, 0.2);
+        }
+
+        .main-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .report-header {
+            background: var(--bg-card);
+            border-radius: 16px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            border: 1px solid var(--border-color);
+        }
+
+        .stock-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1.5rem;
+        }
+
+        .stock-details h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            background: var(--primary-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .stock-subtitle {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+            margin-bottom: 1rem;
+        }
+
+        .recommendation-badge {
+            padding: 0.75rem 1.5rem;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--buy-color);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .key-metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        .metric-card {
+            background: var(--bg-secondary);
+            padding: 1.5rem;
+            border-radius: 12px;
+            text-align: center;
+            border: 1px solid var(--border-color);
+        }
+
+        .metric-value {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .metric-label {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .analysis-section {
+            background: var(--bg-card);
+            border-radius: 16px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            border: 1px solid var(--border-color);
+        }
+
+        .section-title {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .section-icon {
+            background: var(--primary-gradient);
+            padding: 0.5rem;
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+
+        .analysis-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-top: 1.5rem;
+        }
+
+        .analysis-card {
+            background: var(--bg-secondary);
+            padding: 1.5rem;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+        }
+
+        .card-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+        }
+
+        .tag-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        .tag {
+            background: rgba(102, 126, 234, 0.2);
+            color: var(--primary-color);
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            border: 1px solid rgba(102, 126, 234, 0.3);
+        }
+
+        .risk-indicator {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        .risk-score {
+            background: var(--success-color);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-weight: 600;
+        }
+
+        .debate-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-top: 1.5rem;
+        }
+
+        .bull-case {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            padding: 1.5rem;
+            border-radius: 12px;
+        }
+
+        .bear-case {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            padding: 1.5rem;
+            border-radius: 12px;
+        }
+
+        .case-title {
+            font-weight: 600;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .bull-case .case-title {
+            color: var(--buy-color);
+        }
+
+        .bear-case .case-title {
+            color: var(--sell-color);
+        }
+
+        .back-button {
+            background: var(--primary-gradient);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .back-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        .status-completed {
+            color: var(--success-color);
+            font-weight: 600;
+        }
+
+        @media (max-width: 768px) {
+            .stock-info {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .debate-section {
+                grid-template-columns: 1fr;
+            }
+
+            .main-container {
+                padding: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-container">
+            <a href="../index.html" class="logo">
+                <div class="logo-icon">🐑</div>
+                zzsheepTrader
+            </a>
+            <nav>
+                <a href="../index.html" class="nav-link">← Back to Home</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="main-container">
+        <a href="../index.html" class="back-button">
+            <i class="fas fa-arrow-left"></i>
+            Back to Dashboard
+        </a>
+
+        <!-- Report Header -->
+        <div class="report-header">
+            <div class="stock-info">
+                <div class="stock-details">
+                    <h1>AAPL</h1>
+                    <div class="stock-subtitle">Apple Inc. - Comprehensive Analysis Report</div>
+                    <div class="stock-subtitle">Analysis Date: June 27, 2025 • Analysis ID: f7d8e5a9</div>
+                </div>
+                <div class="recommendation-badge">
+                    <i class="fas fa-arrow-up"></i>
+                    BUY
+                </div>
+            </div>
+
+            <div class="key-metrics">
+                <div class="metric-card">
+                    <div class="metric-value">$196.89</div>
+                    <div class="metric-label">Current Price</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">+1.67%</div>
+                    <div class="metric-label">Daily Change</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">4.5/10</div>
+                    <div class="metric-label">Risk Score</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">$3.01T</div>
+                    <div class="metric-label">Market Cap</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Market Analysis Section -->
+        <div class="analysis-section">
+            <h2 class="section-title">
+                <div class="section-icon"><i class="fas fa-chart-line"></i></div>
+                Market & Technical Analysis
+            </h2>
+            <div class="analysis-grid">
+                <div class="analysis-card">
+                    <div class="card-title">Technical Indicators</div>
+                    <p><strong>Status:</strong> <span class="status-completed">Completed</span></p>
+                    <p><strong>Trend:</strong> Bullish</p>
+                    <p><strong>Momentum:</strong> Strong</p>
+                    <p><strong>Volume:</strong> High</p>
+                    <p><strong>Volatility:</strong> Low</p>
+                    <div class="tag-list">
+                        <span class="tag">SMA</span>
+                        <span class="tag">EMA</span>
+                        <span class="tag">MACD</span>
+                        <span class="tag">RSI</span>
+                        <span class="tag">Bollinger Bands</span>
+                        <span class="tag">ATR</span>
+                        <span class="tag">VWMA</span>
+                    </div>
+                </div>
+                <div class="analysis-card">
+                    <div class="card-title">Price Levels</div>
+                    <p><strong>Current Price:</strong> $196.89</p>
+                    <p><strong>Daily Change:</strong> +$3.24 (+1.67%)</p>
+                    <p><strong>Market Cap:</strong> $3.01T</p>
+                    <p><strong>Support Level:</strong> $190</p>
+                    <p><strong>Resistance Level:</strong> $205</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Fundamental Analysis Section -->
+        <div class="analysis-section">
+            <h2 class="section-title">
+                <div class="section-icon"><i class="fas fa-building"></i></div>
+                Fundamental Analysis
+            </h2>
+            <div class="analysis-grid">
+                <div class="analysis-card">
+                    <div class="card-title">Key Metrics</div>
+                    <p><strong>Status:</strong> <span class="status-completed">Completed</span></p>
+                    <p>Comprehensive fundamental analysis covering Apple's financial health, ecosystem strength, and growth prospects in services and emerging technologies.</p>
+                    <div class="tag-list">
+                        <span class="tag">Revenue Growth</span>
+                        <span class="tag">Profitability</span>
+                        <span class="tag">Cash Position</span>
+                        <span class="tag">Debt Levels</span>
+                    </div>
+                </div>
+                <div class="analysis-card">
+                    <div class="card-title">News Sentiment</div>
+                    <p><strong>Status:</strong> <span class="status-completed">Completed</span></p>
+                    <p><strong>Overall Sentiment:</strong> Positive</p>
+                    <p>Recent news sentiment reflects strong confidence in Apple's innovation pipeline, services growth, and ecosystem expansion strategies.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Risk Assessment Section -->
+        <div class="analysis-section">
+            <h2 class="section-title">
+                <div class="section-icon"><i class="fas fa-shield-alt"></i></div>
+                Risk Assessment
+            </h2>
+            <div class="analysis-grid">
+                <div class="analysis-card">
+                    <div class="card-title">Risk Profile</div>
+                    <p><strong>Overall Risk:</strong> Low-Moderate</p>
+                    <div class="risk-indicator">
+                        <span>Risk Score:</span>
+                        <div class="risk-score">4.5/10</div>
+                    </div>
+                    <div class="tag-list">
+                        <span class="tag">Market volatility</span>
+                        <span class="tag">Supply chain risks</span>
+                        <span class="tag">Competition intensity</span>
+                        <span class="tag">Regulatory concerns</span>
+                    </div>
+                </div>
+                <div class="analysis-card">
+                    <div class="card-title">Risk Mitigation</div>
+                    <p>Recommended strategies to manage investment risk:</p>
+                    <ul style="margin-top: 1rem; color: var(--text-secondary);">
+                        <li>Diversification across tech sector</li>
+                        <li>Appropriate position sizing</li>
+                        <li>Stop-loss level implementation</li>
+                        <li>Regular monitoring of ecosystem metrics</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Investment Debate Section -->
+        <div class="analysis-section">
+            <h2 class="section-title">
+                <div class="section-icon"><i class="fas fa-balance-scale"></i></div>
+                Investment Debate Analysis
+            </h2>
+            <div class="debate-section">
+                <div class="bull-case">
+                    <div class="case-title">
+                        <i class="fas fa-arrow-up"></i>
+                        Bull Case
+                    </div>
+                    <p>Strong brand loyalty and ecosystem strength with robust services growth. Apple's innovation in AI, health technology, and AR/VR provides significant competitive advantages and new revenue streams.</p>
+                </div>
+                <div class="bear-case">
+                    <div class="case-title">
+                        <i class="fas fa-arrow-down"></i>
+                        Bear Case
+                    </div>
+                    <p>Market saturation and competition risks in core iPhone business. Regulatory concerns and potential antitrust challenges to App Store and services revenue model.</p>
+                </div>
+            </div>
+            <div style="margin-top: 1.5rem; padding: 1rem; background: var(--bg-secondary); border-radius: 8px; border: 1px solid var(--border-color);">
+                <strong>Consensus:</strong> Growth potential outweighs risks - strong ecosystem and services expansion justify investment.
+            </div>
+        </div>
+
+        <!-- Strategic Actions Section -->
+        <div class="analysis-section">
+            <h2 class="section-title">
+                <div class="section-icon"><i class="fas fa-tasks"></i></div>
+                Strategic Actions & Monitoring
+            </h2>
+            <div class="analysis-grid">
+                <div class="analysis-card">
+                    <div class="card-title">Immediate Actions</div>
+                    <ul style="color: var(--text-secondary);">
+                        <li>Monitor iPhone sales trends</li>
+                        <li>Track services revenue growth</li>
+                        <li>Watch supply chain developments</li>
+                    </ul>
+                </div>
+                <div class="analysis-card">
+                    <div class="card-title">Medium-term Actions</div>
+                    <ul style="color: var(--text-secondary);">
+                        <li>Assess ecosystem expansion progress</li>
+                        <li>Review market share metrics</li>
+                        <li>Evaluate innovation pipeline</li>
+                    </ul>
+                </div>
+                <div class="analysis-card">
+                    <div class="card-title">Key Monitoring Metrics</div>
+                    <div class="tag-list">
+                        <span class="tag">iPhone unit sales</span>
+                        <span class="tag">Services revenue</span>
+                        <span class="tag">Market share trends</span>
+                        <span class="tag">Customer loyalty metrics</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Performance Metrics Section -->
+        <div class="analysis-section">
+            <h2 class="section-title">
+                <div class="section-icon"><i class="fas fa-tachometer-alt"></i></div>
+                Analysis Performance Metrics
+            </h2>
+            <div class="analysis-grid">
+                <div class="analysis-card">
+                    <div class="card-title">Analysis Quality</div>
+                    <p><strong>Data Source:</strong> financialdatasets.ai</p>
+                    <p><strong>Data Quality:</strong> Professional</p>
+                    <p><strong>Reliability Score:</strong> 95%</p>
+                    <p><strong>Cost Efficiency:</strong> Optimized</p>
+                </div>
+                <div class="analysis-card">
+                    <div class="card-title">Technical Details</div>
+                    <p><strong>Analysis Version:</strong> 1.0</p>
+                    <p><strong>Timestamp:</strong> 2025-06-27T18:10:25</p>
+                    <p><strong>Processing Time:</strong> 82.3 seconds</p>
+                    <p><strong>AI Model:</strong> GPT-4o-Mini</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html> 
