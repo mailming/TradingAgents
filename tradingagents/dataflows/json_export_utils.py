@@ -188,23 +188,39 @@ class ZZSheepJSONExporter:
     def _generate_filename(self, ticker: str, analysis_type: str, results: Dict[str, Any]) -> str:
         """Generate a consistent filename for the analysis results"""
         
-        # Get timestamp
-        timestamp = datetime.now()
-        date_str = timestamp.strftime("%Y-%m-%d")
-        time_str = timestamp.strftime("%H-%M-%S")
-        
-        # Try to get analysis ID from results
-        analysis_id = "unknown"
+        # Get market analysis date from results (the date being analyzed)
+        market_date = "unknown-date"
         try:
-            analysis_id = results.get("analysis_metadata", {}).get("analysis_id", str(uuid.uuid4())[:8])
+            # Try different possible locations for the analysis date
+            market_date = (
+                results.get("analysis_metadata", {}).get("analysis_date") or
+                results.get("metadata", {}).get("analysis_date") or
+                results.get("analysis_date") or
+                results.get("date")
+            )
+            if not market_date:
+                # Fallback to current date if not found
+                market_date = datetime.now().strftime("%Y-%m-%d")
         except:
-            analysis_id = str(uuid.uuid4())[:8]
+            market_date = datetime.now().strftime("%Y-%m-%d")
         
-        # Generate filename
-        if analysis_type == "trading_analysis":
-            filename = f"{ticker}_{date_str}_{time_str}_{analysis_id}.json"
-        else:
-            filename = f"{ticker}_{analysis_type}_{date_str}_{time_str}_{analysis_id}.json"
+        # Determine time suffix (default to EOD for end-of-day analysis)
+        current_hour = datetime.now().hour
+        if current_hour >= 16:  # After 4 PM, market closed
+            time_suffix = "EOD"  # End of Day
+        elif current_hour >= 9 and current_hour < 16:  # During market hours (9 AM - 4 PM)
+            time_suffix = "INTRADAY"
+        else:  # Before market opens
+            time_suffix = "PREMARKET"
+        
+        # For specific analysis types, you can customize time suffix
+        if "claude" in analysis_type.lower():
+            time_suffix = "EOD"  # Claude analyses are typically end-of-day
+        elif "real_time" in analysis_type.lower() or "live" in analysis_type.lower():
+            time_suffix = "LIVE"
+        
+        # Generate filename with new pattern: Ticker-(date)_time.json
+        filename = f"{ticker.upper()}-{market_date}_{time_suffix}.json"
         
         return filename
     

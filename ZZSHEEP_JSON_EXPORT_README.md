@@ -103,15 +103,21 @@ daily_paths, summary_path = save_multi_day_to_zzsheep(
 
 ## 📊 File Naming Conventions
 
-The utility uses consistent naming patterns:
+The utility uses consistent naming patterns based on market analysis date:
 
 | Analysis Type | Filename Format | Example |
 |---------------|----------------|---------|
-| **Single Analysis** | `{TICKER}_{DATE}_{TIME}_{ID}.json` | `AAPL_2024-12-28_14-30-15_abc123.json` |
-| **Custom Analysis** | `{TICKER}_{TYPE}_{DATE}_{TIME}_{ID}.json` | `TSLA_momentum_2024-12-28_14-30-15_def456.json` |
-| **Daily Analysis** | `{TICKER}_{DATE}_{ID}_daily.json` | `MSFT_2024-12-27_ghi789_daily.json` |
-| **Summary Report** | `{TICKER}_{PERIOD}_summary_{TIMESTAMP}.json` | `MSFT_7day_summary_20241228_143015.json` |
-| **Claude Analysis** | `{TICKER}_{DATE}_{ID}_claude.json` | `NVDA_2024-12-28_jkl012_claude.json` |
+| **End of Day Analysis** | `{TICKER}-{MARKET_DATE}_EOD.json` | `AAPL-2024-12-28_EOD.json` |
+| **Intraday Analysis** | `{TICKER}-{MARKET_DATE}_INTRADAY.json` | `TSLA-2024-12-28_INTRADAY.json` |
+| **Pre-Market Analysis** | `{TICKER}-{MARKET_DATE}_PREMARKET.json` | `MSFT-2024-12-28_PREMARKET.json` |
+| **Claude Analysis** | `{TICKER}-{MARKET_DATE}_EOD.json` | `NVDA-2024-12-28_EOD.json` |
+| **Live Analysis** | `{TICKER}-{MARKET_DATE}_LIVE.json` | `GOOGL-2024-12-28_LIVE.json` |
+
+**Time Suffix Rules:**
+- **EOD**: Default for after-market analysis (after 4 PM) or Claude AI analysis
+- **INTRADAY**: During market hours (9 AM - 4 PM)
+- **PREMARKET**: Before market opens (before 9 AM)
+- **LIVE**: Real-time analysis (when analysis_type contains "real_time" or "live")
 
 ## 🔧 Integration Examples
 
