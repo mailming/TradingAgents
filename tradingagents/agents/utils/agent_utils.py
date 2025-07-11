@@ -146,8 +146,14 @@ class Toolkit:
         """
 
         result_data = interface.get_YFin_data(symbol, start_date, end_date)
-
-        return result_data
+        
+        # Convert DataFrame to string representation
+        if isinstance(result_data, pd.DataFrame):
+            with pd.option_context('display.max_rows', None, 'display.max_columns', None, 'display.width', None):
+                df_string = result_data.to_string(index=False)
+            return f"## Stock Data for {symbol} from {start_date} to {end_date}:\n\n{df_string}"
+        else:
+            return str(result_data)
 
     @staticmethod
     @tool
