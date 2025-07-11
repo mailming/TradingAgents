@@ -57,6 +57,7 @@ eval_results/
 eval_data/
 *.egg-info/
 
+
 # Analysis Results (contains sensitive trading data)
 analysis_results/
 *.json
@@ -65,3 +66,4 @@ analysis_results/
 .env
 *.key
 api_keys.txt
+
