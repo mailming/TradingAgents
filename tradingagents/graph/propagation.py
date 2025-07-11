@@ -36,9 +36,11 @@ class Propagator:
                 }
             ),
             "market_report": "",
+            "market_data_json": {},
             "fundamentals_report": "",
             "sentiment_report": "",
             "news_report": "",
+            "news_data_json": {},
         }
 
     def get_graph_args(self) -> Dict[str, Any]:
