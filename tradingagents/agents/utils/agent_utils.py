@@ -20,13 +20,22 @@ def create_msg_delete():
         """Clear messages and add placeholder for Anthropic compatibility"""
         messages = state["messages"]
         
-        # Remove all messages
-        removal_operations = [RemoveMessage(id=m.id) for m in messages]
-        
-        # Add a minimal placeholder message
-        placeholder = HumanMessage(content="Continue")
-        
-        return {"messages": removal_operations + [placeholder]}
+        # Handle message removal more gracefully
+        try:
+            # Filter out messages that have valid IDs
+            removal_operations = []
+            for m in messages:
+                if hasattr(m, 'id') and m.id is not None:
+                    removal_operations.append(RemoveMessage(id=m.id))
+            
+            # Add a minimal placeholder message
+            placeholder = HumanMessage(content="Continue")
+            
+            return {"messages": removal_operations + [placeholder]}
+        except Exception as e:
+            # If message removal fails, just clear the messages list and add placeholder
+            placeholder = HumanMessage(content="Continue")
+            return {"messages": [placeholder]}
     
     return delete_messages
 
@@ -87,9 +96,9 @@ class Toolkit:
 
         end_date_str = end_date
 
-        end_date = datetime.strptime(end_date, "%Y-%m-%d")
-        start_date = datetime.strptime(start_date, "%Y-%m-%d")
-        look_back_days = (end_date - start_date).days
+        end_date_dt = datetime.strptime(end_date, "%Y-%m-%d")
+        start_date_dt = datetime.strptime(start_date, "%Y-%m-%d")
+        look_back_days = (end_date_dt - start_date_dt).days
 
         finnhub_news_result = interface.get_finnhub_news(
             ticker, end_date_str, look_back_days

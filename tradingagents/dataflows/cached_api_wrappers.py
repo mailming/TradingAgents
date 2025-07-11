@@ -1,13 +1,16 @@
 """
 Cached API Wrappers for Financial Data
 Integrates the TimeSeriesCache with existing financial APIs
+Enhanced with batch processing and pre-fetching optimizations
 """
 
 import pandas as pd
 import yfinance as yf
 from datetime import datetime, timedelta
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 import logging
+import asyncio
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from .time_series_cache import (
     get_cache, DataType, 
@@ -25,6 +28,131 @@ from .financialdatasets_market_data import (
 
 logger = logging.getLogger(__name__)
 
+
+# ===== BATCH API OPTIMIZATION =====
+
+def batch_fetch_multiple_symbols(symbols: List[str], start_date: datetime, end_date: datetime, 
+                                 data_type: str = "ohlcv", max_workers: int = 5) -> Dict[str, pd.DataFrame]:
+    """
+    Fetch data for multiple symbols in parallel using ThreadPoolExecutor
+    
+    Args:
+        symbols: List of stock ticker symbols
+        start_date: Start date for data
+        end_date: End date for data
+        data_type: Type of data to fetch ('ohlcv', 'news', 'fundamentals')
+        max_workers: Maximum number of concurrent API calls
+    
+    Returns:
+        Dictionary mapping symbols to their DataFrames
+    """
+    
+    def fetch_symbol_data(symbol: str) -> tuple:
+        """Fetch data for a single symbol"""
+        try:
+            if data_type == "ohlcv":
+                data = fetch_financialdatasets_prices_cached(symbol, start_date, end_date)
+            elif data_type == "news":
+                data = fetch_financialdatasets_news_cached(symbol, start_date, end_date)
+            elif data_type == "fundamentals":
+                data = fetch_financialdatasets_financials_cached(symbol, period='annual')
+            else:
+                logger.warning(f"Unsupported data type: {data_type}")
+                return symbol, pd.DataFrame()
+            
+            logger.info(f"✅ Batch fetch completed for {symbol}: {len(data)} records")
+            return symbol, data
+            
+        except Exception as e:
+            logger.error(f"❌ Batch fetch failed for {symbol}: {e}")
+            return symbol, pd.DataFrame()
+    
+    # Use ThreadPoolExecutor for parallel API calls
+    results = {}
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        # Submit all tasks
+        future_to_symbol = {executor.submit(fetch_symbol_data, symbol): symbol for symbol in symbols}
+        
+        # Collect results as they complete
+        for future in as_completed(future_to_symbol):
+            symbol, data = future.result()
+            results[symbol] = data
+    
+    logger.info(f"📊 Batch fetch completed for {len(symbols)} symbols, {data_type} data")
+    return results
+
+
+def prefetch_common_data(symbols: List[str], analysis_dates: List[datetime], 
+                        data_types: List[str] = ["ohlcv", "news"]) -> Dict[str, Dict[str, pd.DataFrame]]:
+    """
+    Pre-fetch commonly used data for multiple symbols and dates
+    
+    Args:
+        symbols: List of stock symbols
+        analysis_dates: List of dates for analysis
+        data_types: List of data types to prefetch
+    
+    Returns:
+        Nested dictionary: {symbol: {data_type: DataFrame}}
+    """
+    
+    prefetched_data = {}
+    
+    # Determine date range for prefetching
+    min_date = min(analysis_dates) - timedelta(days=30)  # 30 days buffer
+    max_date = max(analysis_dates) + timedelta(days=1)
+    
+    logger.info(f"🔄 Pre-fetching data for {len(symbols)} symbols, {len(data_types)} data types")
+    logger.info(f"📅 Date range: {min_date.date()} to {max_date.date()}")
+    
+    for data_type in data_types:
+        logger.info(f"📊 Pre-fetching {data_type} data...")
+        batch_results = batch_fetch_multiple_symbols(symbols, min_date, max_date, data_type)
+        
+        for symbol, data in batch_results.items():
+            if symbol not in prefetched_data:
+                prefetched_data[symbol] = {}
+            prefetched_data[symbol][data_type] = data
+    
+    logger.info(f"✅ Pre-fetching completed for {len(symbols)} symbols")
+    return prefetched_data
+
+
+# ===== OPTIMIZED API WRAPPERS =====
+
+def fetch_financialdatasets_prices_cached_optimized(symbol: str, start_date: datetime, end_date: datetime, 
+                                                   interval: str = 'day', use_cache_only: bool = False) -> pd.DataFrame:
+    """
+    Optimized version of financialdatasets price fetching with additional performance features
+    
+    Args:
+        symbol: Stock ticker symbol
+        start_date: Start date for data
+        end_date: End date for data
+        interval: Time interval ('day', 'minute', etc.)
+        use_cache_only: If True, only return cached data without API calls
+    
+    Returns:
+        DataFrame with OHLCV data
+    """
+    
+    # Check cache first
+    cache = get_cache()
+    cached_data = cache.get_cached_data(symbol, DataType.OHLCV, start_date, end_date)
+    
+    if cached_data is not None:
+        logger.info(f"🎯 Cache hit for {symbol} OHLCV data")
+        return cached_data
+    
+    if use_cache_only:
+        logger.info(f"⚡ Cache-only mode: No API call for {symbol}")
+        return pd.DataFrame()
+    
+    # Fallback to standard cached fetch
+    return fetch_financialdatasets_prices_cached(symbol, start_date, end_date, interval)
+
+
+# ===== ORIGINAL API WRAPPERS (Enhanced) =====
 
 # YFinance OHLCV Data Caching
 def fetch_yfinance_data_cached(symbol: str, start_date: datetime, end_date: datetime) -> pd.DataFrame:

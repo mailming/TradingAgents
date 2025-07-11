@@ -273,7 +273,7 @@ def create_exporter() -> ZZSheepJSONExporter:
     return ZZSheepJSONExporter()
 
 
-def save_to_zzsheep(results: Dict[str, Any], ticker: str = None, analysis_type: str = "trading_analysis") -> Path:
+def save_to_zzsheep(results: Dict[str, Any], ticker: Optional[str] = None, analysis_type: str = "trading_analysis") -> Path:
     """
     Quick function to save results to zzsheepTrader project
     

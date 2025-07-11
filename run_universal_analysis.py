@@ -68,11 +68,21 @@ def run_analysis(ticker, analysis_date):
         print(f"   📅 Non-trading day - Analysis will use most recent market data")
     
     # Check API keys
-    required_keys = ['ANTHROPIC_API_KEY', 'FINANCIALDATASETS_API_KEY', 'OPENAI_API_KEY']
+    required_keys = ['ANTHROPIC_API_KEY', 'FINANCIALDATASETS_API_KEY']
+    optional_keys = ['OPENAI_API_KEY']
+    
+    # Check required keys
     for key in required_keys:
         if not os.getenv(key):
             print(f"❌ {key} not found!")
             return None
+    
+    # Check optional keys and warn if missing
+    for key in optional_keys:
+        if not os.getenv(key):
+            print(f"⚠️  {key} not found - some OpenAI features will be unavailable")
+        else:
+            print(f"✅ {key} found")
     
     # Professional Claude AI configuration
     config = DEFAULT_CONFIG.copy()
@@ -86,9 +96,9 @@ def run_analysis(ticker, analysis_date):
     print(f"   🧠 AI Model: Claude-3.5-Sonnet (Premium)")
     print(f"   📊 Data Source: financialdatasets.ai (Professional)")
     
-    # Initialize TradingAgents
+    # Initialize TradingAgents - use sequential processing to avoid message deletion issues
     try:
-        ta = TradingAgentsGraph(debug=False, config=config)
+        ta = TradingAgentsGraph(debug=False, config=config, parallel_processing=False)
         print(f"   ✅ TradingAgents initialized successfully")
     except Exception as e:
         if "already exists" in str(e).lower() or "collection" in str(e).lower():
@@ -169,7 +179,7 @@ def run_analysis(ticker, analysis_date):
                     "indicators_used": ["SMA", "EMA", "MACD", "RSI", "Bollinger Bands", "ATR", "VWMA"],
                     "trend_analysis": market_data["technical_indicators"]["trend"],
                     "volatility_assessment": market_data["volatility"],
-                    "full_report": final_state.get("market_report", "")[:500] + "..." if len(final_state.get("market_report", "")) > 500 else final_state.get("market_report", "")
+                    "full_report": final_state.get("market_report", "")
                 },
                 "news_analysis": {
                     "status": "completed",
@@ -178,7 +188,7 @@ def run_analysis(ticker, analysis_date):
                     "sentiment_score": news_sentiment["sentiment_score"],
                     "key_headlines_analyzed": True,
                     "ai_confidence": "High",
-                    "full_report": final_state.get("news_report", "")[:500] + "..." if len(final_state.get("news_report", "")) > 500 else final_state.get("news_report", "")
+                    "full_report": final_state.get("news_report", "")
                 },
                 "fundamental_analysis": {
                     "status": "completed",
@@ -188,7 +198,7 @@ def run_analysis(ticker, analysis_date):
                     "growth_prospects": fundamental_insights["growth_prospects"],
                     "confidence_level": fundamental_insights["confidence_level"],
                     "analysis_source": fundamental_insights["analysis_source"],
-                    "full_report": final_state.get("fundamentals_report", "")[:500] + "..." if len(final_state.get("fundamentals_report", "")) > 500 else final_state.get("fundamentals_report", "")
+                    "full_report": final_state.get("fundamentals_report", "")
                 },
                 "investment_debate": {
                     "status": "completed",
