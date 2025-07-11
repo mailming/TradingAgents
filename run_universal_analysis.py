@@ -28,7 +28,10 @@ from tradingagents.agents.utils.market_data_utils import (
     extract_risk_assessment_from_reports,
     extract_strategic_insights_from_reports,
     extract_fundamental_insights_from_reports,
-    extract_performance_metrics_from_reports
+    extract_performance_metrics_from_reports,
+    format_market_analysis_report,
+    format_news_analysis_report,
+    format_fundamental_analysis_report
 )
 
 def is_trading_day(date):
@@ -175,30 +178,30 @@ def run_analysis(ticker, analysis_date):
             "analysis_components": {
                 "market_analysis": {
                     "status": "completed",
-                    "summary": "Claude AI market analysis with real-time data integration",
+                    "summary": "Professional market analysis with real-time data integration and technical indicators",
                     "indicators_used": ["SMA", "EMA", "MACD", "RSI", "Bollinger Bands", "ATR", "VWMA"],
                     "trend_analysis": market_data["technical_indicators"]["trend"],
                     "volatility_assessment": market_data["volatility"],
-                    "full_report": final_state.get("market_report", "")
+                    "full_report": format_market_analysis_report(final_state, market_data, ticker)
                 },
                 "news_analysis": {
                     "status": "completed",
-                    "summary": "Claude AI news sentiment analysis",
+                    "summary": "Professional news sentiment analysis with AI-powered insights",
                     "sentiment": news_sentiment["overall_sentiment"],
                     "sentiment_score": news_sentiment["sentiment_score"],
                     "key_headlines_analyzed": True,
                     "ai_confidence": "High",
-                    "full_report": final_state.get("news_report", "")
+                    "full_report": format_news_analysis_report(final_state, news_sentiment, ticker)
                 },
                 "fundamental_analysis": {
                     "status": "completed",
-                    "summary": "Claude AI fundamental analysis",
+                    "summary": "Professional fundamental analysis with financial health assessment",
                     "key_metrics": fundamental_insights["key_metrics"],
                     "financial_health": fundamental_insights["financial_health"],
                     "growth_prospects": fundamental_insights["growth_prospects"],
                     "confidence_level": fundamental_insights["confidence_level"],
                     "analysis_source": fundamental_insights["analysis_source"],
-                    "full_report": final_state.get("fundamentals_report", "")
+                    "full_report": format_fundamental_analysis_report(final_state, fundamental_insights, ticker)
                 },
                 "investment_debate": {
                     "status": "completed",

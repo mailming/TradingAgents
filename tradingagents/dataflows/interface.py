@@ -1,4 +1,4 @@
-from typing import Annotated, Dict
+from typing import Annotated, Dict, Optional
 from .reddit_utils import fetch_top_from_category
 from .yfin_utils import *
 from .stockstats_utils import *
@@ -35,12 +35,16 @@ def get_finnhub_news(
         str: dataframe containing the news of the company in the time frame
 
     """
+    
+    # Handle None DATA_DIR
+    if DATA_DIR is None:
+        return "Error: DATA_DIR is not configured"
 
     start_date = datetime.strptime(curr_date, "%Y-%m-%d")
     before = start_date - relativedelta(days=look_back_days)
-    before = before.strftime("%Y-%m-%d")
+    before_str = before.strftime("%Y-%m-%d")
 
-    result = get_data_in_range(ticker, before, curr_date, "news_data", DATA_DIR)
+    result = get_data_in_range(ticker, before_str, curr_date, "news_data", DATA_DIR)
 
     if len(result) == 0:
         return ""
@@ -55,7 +59,7 @@ def get_finnhub_news(
             )
             combined_result += current_news + "\n\n"
 
-    return f"## {ticker} News, from {before} to {curr_date}:\n" + str(combined_result)
+    return f"## {ticker} News, from {before_str} to {curr_date}:\n" + str(combined_result)
 
 
 def get_finnhub_company_insider_sentiment(
@@ -74,12 +78,16 @@ def get_finnhub_company_insider_sentiment(
     Returns:
         str: a report of the sentiment in the past 15 days starting at curr_date
     """
+    
+    # Handle None DATA_DIR
+    if DATA_DIR is None:
+        return "Error: DATA_DIR is not configured"
 
     date_obj = datetime.strptime(curr_date, "%Y-%m-%d")
     before = date_obj - relativedelta(days=look_back_days)
-    before = before.strftime("%Y-%m-%d")
+    before_str = before.strftime("%Y-%m-%d")
 
-    data = get_data_in_range(ticker, before, curr_date, "insider_senti", DATA_DIR)
+    data = get_data_in_range(ticker, before_str, curr_date, "insider_senti", DATA_DIR)
 
     if len(data) == 0:
         return ""
@@ -93,7 +101,7 @@ def get_finnhub_company_insider_sentiment(
                 seen_dicts.append(entry)
 
     return (
-        f"## {ticker} Insider Sentiment Data for {before} to {curr_date}:\n"
+        f"## {ticker} Insider Sentiment Data for {before_str} to {curr_date}:\n"
         + result_str
         + "The change field refers to the net buying/selling from all insiders' transactions. The mspr field refers to monthly share purchase ratio."
     )
@@ -115,12 +123,16 @@ def get_finnhub_company_insider_transactions(
     Returns:
         str: a report of the company's insider transaction/trading informtaion in the past 15 days
     """
+    
+    # Handle None DATA_DIR
+    if DATA_DIR is None:
+        return "Error: DATA_DIR is not configured"
 
     date_obj = datetime.strptime(curr_date, "%Y-%m-%d")
     before = date_obj - relativedelta(days=look_back_days)
-    before = before.strftime("%Y-%m-%d")
+    before_str = before.strftime("%Y-%m-%d")
 
-    data = get_data_in_range(ticker, before, curr_date, "insider_trans", DATA_DIR)
+    data = get_data_in_range(ticker, before_str, curr_date, "insider_trans", DATA_DIR)
 
     if len(data) == 0:
         return ""
@@ -135,7 +147,7 @@ def get_finnhub_company_insider_transactions(
                 seen_dicts.append(entry)
 
     return (
-        f"## {ticker} insider transactions from {before} to {curr_date}:\n"
+        f"## {ticker} insider transactions from {before_str} to {curr_date}:\n"
         + result_str
         + "The change field reflects the variation in share count—here a negative number indicates a reduction in holdings—while share specifies the total number of shares involved. The transactionPrice denotes the per-share price at which the trade was executed, and transactionDate marks when the transaction occurred. The name field identifies the insider making the trade, and transactionCode (e.g., S for sale) clarifies the nature of the transaction. FilingDate records when the transaction was officially reported, and the unique id links to the specific SEC filing, as indicated by the source. Additionally, the symbol ties the transaction to a particular company, isDerivative flags whether the trade involves derivative securities, and currency notes the currency context of the transaction."
     )
@@ -149,6 +161,10 @@ def get_simfin_balance_sheet(
     ],
     curr_date: Annotated[str, "current date you are trading at, yyyy-mm-dd"],
 ):
+    # Handle None DATA_DIR
+    if DATA_DIR is None:
+        return "Error: DATA_DIR is not configured"
+        
     data_path = os.path.join(
         DATA_DIR,
         "fundamental_data",
@@ -196,6 +212,10 @@ def get_simfin_cashflow(
     ],
     curr_date: Annotated[str, "current date you are trading at, yyyy-mm-dd"],
 ):
+    # Handle None DATA_DIR
+    if DATA_DIR is None:
+        return "Error: DATA_DIR is not configured"
+        
     data_path = os.path.join(
         DATA_DIR,
         "fundamental_data",
@@ -243,6 +263,10 @@ def get_simfin_income_statements(
     ],
     curr_date: Annotated[str, "current date you are trading at, yyyy-mm-dd"],
 ):
+    # Handle None DATA_DIR
+    if DATA_DIR is None:
+        return "Error: DATA_DIR is not configured"
+        
     data_path = os.path.join(
         DATA_DIR,
         "fundamental_data",
@@ -289,11 +313,11 @@ def get_google_news(
 ) -> str:
     query = query.replace(" ", "+")
 
-    start_date = datetime.strptime(curr_date, "%Y-%m-%d")
-    before = start_date - relativedelta(days=look_back_days)
-    before = before.strftime("%Y-%m-%d")
+    start_date_dt = datetime.strptime(curr_date, "%Y-%m-%d")
+    before = start_date_dt - relativedelta(days=look_back_days)
+    before_str = before.strftime("%Y-%m-%d")
 
-    news_results = getNewsData(query, before, curr_date)
+    news_results = getNewsData(query, before_str, curr_date)
 
     news_str = ""
 
@@ -305,7 +329,7 @@ def get_google_news(
     if len(news_results) == 0:
         return ""
 
-    return f"## {query} Google News, from {before} to {curr_date}:\n\n{news_str}"
+    return f"## {query} Google News, from {before_str} to {curr_date}:\n\n{news_str}"
 
 
 def get_reddit_global_news(
@@ -321,19 +345,23 @@ def get_reddit_global_news(
     Returns:
         str: A formatted dataframe containing the latest news articles posts on reddit and meta information in these columns: "created_utc", "id", "title", "selftext", "score", "num_comments", "url"
     """
+    
+    # Handle None DATA_DIR
+    if DATA_DIR is None:
+        return "Error: DATA_DIR is not configured"
 
-    start_date = datetime.strptime(start_date, "%Y-%m-%d")
-    before = start_date - relativedelta(days=look_back_days)
-    before = before.strftime("%Y-%m-%d")
+    start_date_dt = datetime.strptime(start_date, "%Y-%m-%d")
+    before = start_date_dt - relativedelta(days=look_back_days)
+    before_str = before.strftime("%Y-%m-%d")
 
     posts = []
     # iterate from start_date to end_date
-    curr_date = datetime.strptime(before, "%Y-%m-%d")
+    curr_date = datetime.strptime(before_str, "%Y-%m-%d")
 
-    total_iterations = (start_date - curr_date).days + 1
+    total_iterations = (start_date_dt - curr_date).days + 1
     pbar = tqdm(desc=f"Getting Global News on {start_date}", total=total_iterations)
 
-    while curr_date <= start_date:
+    while curr_date <= start_date_dt:
         curr_date_str = curr_date.strftime("%Y-%m-%d")
         fetch_result = fetch_top_from_category(
             "global_news",
@@ -357,7 +385,7 @@ def get_reddit_global_news(
         else:
             news_str += f"### {post['title']}\n\n{post['content']}\n\n"
 
-    return f"## Global News Reddit, from {before} to {curr_date}:\n{news_str}"
+    return f"## Global News Reddit, from {before_str} to {curr_date}:\n{news_str}"
 
 
 def get_reddit_company_news(
@@ -375,22 +403,26 @@ def get_reddit_company_news(
     Returns:
         str: A formatted dataframe containing the latest news articles posts on reddit and meta information in these columns: "created_utc", "id", "title", "selftext", "score", "num_comments", "url"
     """
+    
+    # Handle None DATA_DIR
+    if DATA_DIR is None:
+        return "Error: DATA_DIR is not configured"
 
-    start_date = datetime.strptime(start_date, "%Y-%m-%d")
-    before = start_date - relativedelta(days=look_back_days)
-    before = before.strftime("%Y-%m-%d")
+    start_date_dt = datetime.strptime(start_date, "%Y-%m-%d")
+    before = start_date_dt - relativedelta(days=look_back_days)
+    before_str = before.strftime("%Y-%m-%d")
 
     posts = []
     # iterate from start_date to end_date
-    curr_date = datetime.strptime(before, "%Y-%m-%d")
+    curr_date = datetime.strptime(before_str, "%Y-%m-%d")
 
-    total_iterations = (start_date - curr_date).days + 1
+    total_iterations = (start_date_dt - curr_date).days + 1
     pbar = tqdm(
         desc=f"Getting Company News for {ticker} on {start_date}",
         total=total_iterations,
     )
 
-    while curr_date <= start_date:
+    while curr_date <= start_date_dt:
         curr_date_str = curr_date.strftime("%Y-%m-%d")
         fetch_result = fetch_top_from_category(
             "company_news",
@@ -416,7 +448,7 @@ def get_reddit_company_news(
         else:
             news_str += f"### {post['title']}\n\n{post['content']}\n\n"
 
-    return f"##{ticker} News Reddit, from {before} to {curr_date}:\n\n{news_str}"
+    return f"##{ticker} News Reddit, from {before_str} to {curr_date}:\n\n{news_str}"
 
 
 def get_stock_stats_indicators_window(
@@ -507,9 +539,13 @@ def get_stock_stats_indicators_window(
             f"Indicator {indicator} is not supported. Please choose from: {list(best_ind_params.keys())}"
         )
 
+    # Handle None DATA_DIR
+    if DATA_DIR is None:
+        return "Error: DATA_DIR is not configured"
+
     end_date = curr_date
-    curr_date = datetime.strptime(curr_date, "%Y-%m-%d")
-    before = curr_date - relativedelta(days=look_back_days)
+    curr_date_dt = datetime.strptime(curr_date, "%Y-%m-%d")
+    before = curr_date_dt - relativedelta(days=look_back_days)
 
     if not online:
         # read from YFin data
@@ -523,27 +559,27 @@ def get_stock_stats_indicators_window(
         dates_in_df = data["Date"].astype(str).str[:10]
 
         ind_string = ""
-        while curr_date >= before:
+        while curr_date_dt >= before:
             # only do the trading dates
-            if curr_date.strftime("%Y-%m-%d") in dates_in_df.values:
+            if curr_date_dt.strftime("%Y-%m-%d") in dates_in_df.values:
                 indicator_value = get_stockstats_indicator(
-                    symbol, indicator, curr_date.strftime("%Y-%m-%d"), online
+                    symbol, indicator, curr_date_dt.strftime("%Y-%m-%d"), online
                 )
 
-                ind_string += f"{curr_date.strftime('%Y-%m-%d')}: {indicator_value}\n"
+                ind_string += f"{curr_date_dt.strftime('%Y-%m-%d')}: {indicator_value}\n"
 
-            curr_date = curr_date - relativedelta(days=1)
+            curr_date_dt = curr_date_dt - relativedelta(days=1)
     else:
         # online gathering
         ind_string = ""
-        while curr_date >= before:
+        while curr_date_dt >= before:
             indicator_value = get_stockstats_indicator(
-                symbol, indicator, curr_date.strftime("%Y-%m-%d"), online
+                symbol, indicator, curr_date_dt.strftime("%Y-%m-%d"), online
             )
 
-            ind_string += f"{curr_date.strftime('%Y-%m-%d')}: {indicator_value}\n"
+            ind_string += f"{curr_date_dt.strftime('%Y-%m-%d')}: {indicator_value}\n"
 
-            curr_date = curr_date - relativedelta(days=1)
+            curr_date_dt = curr_date_dt - relativedelta(days=1)
 
     result_str = (
         f"## {indicator} values from {before.strftime('%Y-%m-%d')} to {end_date}:\n\n"
@@ -563,9 +599,10 @@ def get_stockstats_indicator(
     ],
     online: Annotated[bool, "to fetch data online or offline"],
 ) -> str:
-
-    curr_date = datetime.strptime(curr_date, "%Y-%m-%d")
-    curr_date = curr_date.strftime("%Y-%m-%d")
+    
+    # Handle None DATA_DIR
+    if DATA_DIR is None:
+        return "Error: DATA_DIR is not configured"
 
     try:
         indicator_value = StockstatsUtils.get_stock_stats(
@@ -589,6 +626,10 @@ def get_YFin_data_window(
     curr_date: Annotated[str, "Start date in yyyy-mm-dd format"],
     look_back_days: Annotated[int, "how many days to look back"],
 ) -> str:
+    # Handle None DATA_DIR
+    if DATA_DIR is None:
+        return "Error: DATA_DIR is not configured"
+        
     # calculate past days
     date_obj = datetime.strptime(curr_date, "%Y-%m-%d")
     before = date_obj - relativedelta(days=look_back_days)
@@ -647,8 +688,11 @@ def get_YFin_data_online(
         )
 
     # Remove timezone info from index for cleaner output
-    if data.index.tz is not None:
-        data.index = data.index.tz_localize(None)
+    try:
+        if hasattr(data.index, 'tz') and getattr(data.index, 'tz', None) is not None:
+            data.index = getattr(data.index, 'tz_localize', lambda x: data.index)(None)
+    except (AttributeError, TypeError):
+        pass  # Index doesn't have timezone info
 
     # Round numerical values to 2 decimal places for cleaner display
     numeric_columns = ["Open", "High", "Low", "Close", "Adj Close"]
@@ -671,7 +715,11 @@ def get_YFin_data(
     symbol: Annotated[str, "ticker symbol of the company"],
     start_date: Annotated[str, "Start date in yyyy-mm-dd format"],
     end_date: Annotated[str, "End date in yyyy-mm-dd format"],
-) -> str:
+) -> pd.DataFrame:
+    # Handle None DATA_DIR
+    if DATA_DIR is None:
+        raise ValueError("DATA_DIR is not configured")
+        
     # read in data
     data = pd.read_csv(
         os.path.join(
@@ -699,7 +747,12 @@ def get_YFin_data(
     # remove the index from the dataframe
     filtered_data = filtered_data.reset_index(drop=True)
 
-    return filtered_data
+    # Ensure we return a DataFrame
+    if isinstance(filtered_data, pd.DataFrame):
+        return filtered_data
+    else:
+        # Fallback to empty DataFrame if something went wrong
+        return pd.DataFrame()
 
 
 def get_stock_news_openai(ticker, curr_date):
@@ -710,7 +763,7 @@ def get_stock_news_openai(ticker, curr_date):
     
     try:
         config = get_config()
-        client = OpenAI(base_url=config["backend_url"])
+        client = OpenAI(base_url=config["backend_url"], api_key=openai_key)
 
         response = client.responses.create(
             model=config["quick_think_llm"],
@@ -740,7 +793,11 @@ def get_stock_news_openai(ticker, curr_date):
             store=True,
         )
 
-        return response.output[1].content[0].text
+        # Safe access to response output
+        try:
+            return str(response.output[1].content[0].text)
+        except (AttributeError, IndexError, TypeError):
+            return f"Unable to retrieve social media news for {ticker} on {curr_date}"
     except Exception as e:
         return f"OpenAI API error for {ticker} social media news: {str(e)}"
 
@@ -753,7 +810,7 @@ def get_global_news_openai(curr_date):
     
     try:
         config = get_config()
-        client = OpenAI(base_url=config["backend_url"])
+        client = OpenAI(base_url=config["backend_url"], api_key=openai_key)
 
         response = client.responses.create(
             model=config["quick_think_llm"],
@@ -783,7 +840,14 @@ def get_global_news_openai(curr_date):
             store=True,
         )
 
-        return response.output[1].content[0].text
+        # Safe access to response output
+        if hasattr(response, 'output') and len(response.output) > 1:
+            output_item = response.output[1]
+            if hasattr(output_item, 'content') and len(output_item.content) > 0:
+                return output_item.content[0].text
+            elif hasattr(output_item, 'text'):
+                return output_item.text
+        return f"Unable to retrieve global news for {curr_date}"
     except Exception as e:
         return f"OpenAI API error for global news: {str(e)}"
 
@@ -796,7 +860,7 @@ def get_fundamentals_openai(ticker, curr_date):
     
     try:
         config = get_config()
-        client = OpenAI(base_url=config["backend_url"])
+        client = OpenAI(base_url=config["backend_url"], api_key=openai_key)
 
         response = client.responses.create(
             model=config["quick_think_llm"],
@@ -826,7 +890,14 @@ def get_fundamentals_openai(ticker, curr_date):
             store=True,
         )
 
-        return response.output[1].content[0].text
+        # Safe access to response output
+        if hasattr(response, 'output') and len(response.output) > 1:
+            output_item = response.output[1]
+            if hasattr(output_item, 'content') and len(output_item.content) > 0:
+                return output_item.content[0].text
+            elif hasattr(output_item, 'text'):
+                return output_item.text
+        return f"Unable to retrieve fundamental analysis for {ticker} on {curr_date}"
     except Exception as e:
         return f"OpenAI API error for {ticker} fundamental analysis: {str(e)}"
 
@@ -989,7 +1060,12 @@ def get_technical_indicators_cached(
     indicator_str = ""
     for _, row in df.iterrows():
         if row['value'] is not None:
-            indicator_str += f"{row['date'].strftime('%Y-%m-%d')}: {row['value']:.4f}\n"
+            date_val = row['date']
+            if hasattr(date_val, 'strftime'):
+                date_str = date_val.strftime('%Y-%m-%d')
+            else:
+                date_str = str(date_val)[:10]
+            indicator_str += f"{date_str}: {row['value']:.4f}\n"
     
     return f"## {indicator} values for {symbol} from {start_dt.strftime('%Y-%m-%d')} to {curr_date}:\n\n{indicator_str}"
 
@@ -1026,8 +1102,8 @@ def get_cache_statistics() -> str:
 
 
 def clear_cache_data(
-    symbol: Annotated[str, "ticker symbol (optional - clears all if not specified)"] = None,
-    older_than_days: Annotated[int, "clear data older than N days (optional)"] = None
+    symbol: Optional[str] = None,
+    older_than_days: Optional[int] = None
 ) -> str:
     """
     Clear cached financial data based on criteria
