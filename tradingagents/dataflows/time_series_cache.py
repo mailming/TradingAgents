@@ -15,10 +15,39 @@ import pickle
 from dataclasses import dataclass
 from enum import Enum
 import logging
-
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+
+def _normalize_datetime_for_comparison(dt_series: pd.Series, target_dt: datetime) -> Tuple[pd.Series, datetime]:
+    """
+    Normalize datetime series and target datetime for safe comparison
+    
+    Args:
+        dt_series: Pandas datetime series (may be timezone-aware)
+        target_dt: Target datetime object (may be timezone-naive)
+    
+    Returns:
+        Tuple of (normalized_series, normalized_target_dt) both in same timezone
+    """
+    # If series is timezone-aware and target is naive, convert series to naive
+    # This is the safest approach as it preserves the logical comparison intent
+    if dt_series.dt.tz is not None and target_dt.tzinfo is None:
+        # Remove timezone from series (convert to naive in same logical time)
+        dt_series = dt_series.dt.tz_localize(None)
+    # If series is timezone-naive and target is timezone-aware, make target naive
+    elif dt_series.dt.tz is None and target_dt.tzinfo is not None:
+        # Convert target to naive (assuming it represents the same logical time)
+        target_dt = target_dt.replace(tzinfo=None)
+    # If both are timezone-aware but different zones, convert to naive
+    elif dt_series.dt.tz is not None and target_dt.tzinfo is not None:
+        if str(dt_series.dt.tz) != str(target_dt.tzinfo):
+            # Convert both to naive to avoid timezone conversion issues
+            dt_series = dt_series.dt.tz_localize(None)
+            target_dt = target_dt.replace(tzinfo=None)
+    
+    return dt_series, target_dt
 
 
 class DataType(Enum):
@@ -190,10 +219,14 @@ class TimeSeriesCache:
                     # Filter to requested date range
                     if 'date' in df.columns:
                         df['date'] = pd.to_datetime(df['date'])
-                        df = df[(df['date'] >= start_date) & (df['date'] <= end_date)]
+                        normalized_series, norm_start = _normalize_datetime_for_comparison(df['date'], start_date)
+                        _, norm_end = _normalize_datetime_for_comparison(df['date'], end_date)
+                        df = df[(normalized_series >= norm_start) & (normalized_series <= norm_end)]
                     elif 'timestamp' in df.columns:
                         df['timestamp'] = pd.to_datetime(df['timestamp'])
-                        df = df[(df['timestamp'] >= start_date) & (df['timestamp'] <= end_date)]
+                        normalized_series, norm_start = _normalize_datetime_for_comparison(df['timestamp'], start_date)
+                        _, norm_end = _normalize_datetime_for_comparison(df['timestamp'], end_date)
+                        df = df[(normalized_series >= norm_start) & (normalized_series <= norm_end)]
                     
                     dfs.append(df)
                     
@@ -320,9 +353,11 @@ class TimeSeriesCache:
                 date_col = 'date' if 'date' in cached_df.columns else 'timestamp'
                 if date_col in cached_df.columns:
                     cached_df[date_col] = pd.to_datetime(cached_df[date_col])
+                    normalized_series, norm_start = _normalize_datetime_for_comparison(cached_df[date_col], start_date)
+                    _, norm_end = _normalize_datetime_for_comparison(cached_df[date_col], end_date)
                     cached_df = cached_df[
-                        (cached_df[date_col] >= start_date) & 
-                        (cached_df[date_col] <= end_date)
+                        (normalized_series >= norm_start) & 
+                        (normalized_series <= norm_end)
                     ]
                 all_data_frames.append(cached_df)
             except Exception as e:

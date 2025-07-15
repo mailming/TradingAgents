@@ -11,7 +11,7 @@ import re
 import numpy as np
 import pandas as pd
 from datetime import datetime, timedelta
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, Union
 import logging
 
 # Set up logging
@@ -133,7 +133,8 @@ def extract_market_data_from_reports(final_state: Dict[str, Any], ticker: str = 
                 # Try to get market cap from quote, but it's often not available
                 market_cap = quote.get('market_cap', 'N/A')
                 if market_cap and market_cap != 'N/A':
-                    market_data["market_cap"] = market_cap
+                    # Format raw market cap number into human-readable format
+                    market_data["market_cap"] = _format_market_cap(market_cap)
                 
                 # Extract volume (format nicely with commas)
                 volume = quote.get('volume', 'N/A')
@@ -147,9 +148,11 @@ def extract_market_data_from_reports(final_state: Dict[str, Any], ticker: str = 
     except Exception as e:
         logger.warning(f"⚠️ Could not fetch market data for {ticker}: {e}")
     
-    # Step 2: Calculate volatility from recent historical data
+    # Step 2: Calculate volatility from recent historical data  
+    volatility_value = "N/A"
     try:
-        from tradingagents.dataflows.cached_api_wrappers import fetch_financialdatasets_prices_cached
+        # Use the same reliable data source as technical indicators
+        from tradingagents.dataflows.financialdatasets_market_data import FinancialDatasetsClient
         
         # Get 30 days of historical data to calculate volatility relative to analysis date
         if target_date:
@@ -158,9 +161,33 @@ def extract_market_data_from_reports(final_state: Dict[str, Any], ticker: str = 
             end_date = datetime.now()
         start_date = end_date - timedelta(days=30)
         
-        hist_data = fetch_financialdatasets_prices_cached(ticker, start_date, end_date)
+        # Try cached data first, then fall back to direct API
+        hist_data = None
+        try:
+            from tradingagents.dataflows.cached_api_wrappers import fetch_financialdatasets_prices_cached
+            hist_data = fetch_financialdatasets_prices_cached(ticker, start_date, end_date)
+            if not hist_data.empty and 'close' in hist_data.columns:
+                logger.info(f"📊 Using cached data for volatility calculation for {ticker}")
+        except Exception as e:
+            logger.warning(f"⚠️ Cached data failed for volatility, trying direct API: {e}")
         
-        if not hist_data.empty and 'close' in hist_data.columns:
+        # If cached data failed, use direct API (same as technical indicators)
+        if hist_data is None or hist_data.empty:
+            try:
+                client = FinancialDatasetsClient()
+                hist_data = client.get_historical_prices(
+                    ticker=ticker,
+                    start_date=start_date.strftime('%Y-%m-%d'),
+                    end_date=end_date.strftime('%Y-%m-%d'),
+                    interval='day'
+                )
+                if not hist_data.empty and 'close' in hist_data.columns:
+                    logger.info(f"📊 Using direct API data for volatility calculation for {ticker}")
+            except Exception as e:
+                logger.warning(f"⚠️ Direct API also failed for volatility: {e}")
+                hist_data = None
+        
+        if hist_data is not None and not hist_data.empty and 'close' in hist_data.columns:
             # Calculate daily returns
             hist_data['daily_return'] = hist_data['close'].pct_change()
             
@@ -168,7 +195,8 @@ def extract_market_data_from_reports(final_state: Dict[str, Any], ticker: str = 
             daily_vol = hist_data['daily_return'].std()
             annual_vol = daily_vol * np.sqrt(252) * 100  # Convert to percentage
             
-            market_data["volatility"] = f"{annual_vol:.1f}%"
+            volatility_value = f"{annual_vol:.1f}%"
+            market_data["volatility"] = volatility_value
             logger.info(f"📊 Volatility calculated for {ticker}: {annual_vol:.1f}%")
             
             # Also extract volume from historical data if real-time failed
@@ -176,6 +204,8 @@ def extract_market_data_from_reports(final_state: Dict[str, Any], ticker: str = 
                 avg_volume = hist_data['volume'].tail(5).mean()  # 5-day average
                 market_data["volume"] = f"{int(avg_volume):,}"
                 logger.info(f"📊 Volume from historical data for {ticker}: {int(avg_volume):,}")
+        else:
+            logger.warning(f"⚠️ No valid historical data available for volatility calculation for {ticker}")
                 
     except Exception as e:
         logger.warning(f"⚠️ Could not calculate volatility for {ticker}: {e}")
@@ -187,10 +217,90 @@ def extract_market_data_from_reports(final_state: Dict[str, Any], ticker: str = 
         for key, value in calculated_indicators.items():
             if value != "N/A":
                 market_data["technical_indicators"][key] = value
+        
+        # Calculate momentum based on technical indicators
+        momentum_value = "N/A"
+        try:
+            rsi_val = market_data["technical_indicators"]["rsi"]
+            macd_val = market_data["technical_indicators"]["macd"]
+            trend_val = market_data["technical_indicators"]["trend"]
+            
+            # Calculate momentum score based on multiple indicators
+            momentum_score = 0
+            momentum_factors = []
+            
+            # RSI momentum (0-100 scale)
+            if rsi_val != "N/A":
+                try:
+                    rsi_num = float(rsi_val)
+                    if rsi_num > 70:
+                        momentum_score += 2
+                        momentum_factors.append("Strong RSI")
+                    elif rsi_num > 50:
+                        momentum_score += 1
+                        momentum_factors.append("Positive RSI")
+                    elif rsi_num < 30:
+                        momentum_score -= 2
+                        momentum_factors.append("Weak RSI")
+                    elif rsi_num < 50:
+                        momentum_score -= 1
+                        momentum_factors.append("Negative RSI")
+                except ValueError:
+                    pass
+            
+            # MACD momentum
+            if macd_val != "N/A":
+                try:
+                    macd_num = float(macd_val)
+                    if macd_num > 0:
+                        momentum_score += 1
+                        momentum_factors.append("Positive MACD")
+                    elif macd_num < 0:
+                        momentum_score -= 1
+                        momentum_factors.append("Negative MACD")
+                except ValueError:
+                    pass
+            
+            # Trend momentum
+            if trend_val == "Bullish":
+                momentum_score += 1
+                momentum_factors.append("Bullish Trend")
+            elif trend_val == "Bearish":
+                momentum_score -= 1
+                momentum_factors.append("Bearish Trend")
+            
+            # Determine momentum rating
+            if momentum_score >= 3:
+                momentum_value = "Very Strong"
+            elif momentum_score >= 2:
+                momentum_value = "Strong"
+            elif momentum_score >= 1:
+                momentum_value = "Positive"
+            elif momentum_score <= -3:
+                momentum_value = "Very Weak"
+            elif momentum_score <= -2:
+                momentum_value = "Weak"
+            elif momentum_score <= -1:
+                momentum_value = "Negative"
+            else:
+                momentum_value = "Neutral"
+            
+            market_data["technical_indicators"]["momentum"] = momentum_value
+            logger.info(f"📊 Momentum calculated for {ticker}: {momentum_value} (score: {momentum_score}, factors: {momentum_factors})")
+            
+        except Exception as e:
+            logger.warning(f"⚠️ Momentum calculation failed for {ticker}: {e}")
                 
         logger.info(f"✅ Technical indicators calculated for {ticker}")
     except Exception as e:
         logger.warning(f"⚠️ Technical indicator calculation failed for {ticker}: {e}")
+    
+    # Ensure volatility is propagated to main market_data structure
+    try:
+        if volatility_value != "N/A":
+            market_data["volatility"] = volatility_value
+    except NameError:
+        logger.warning(f"⚠️ Volatility value not defined in scope for {ticker}")
     
     # Step 4: Extract additional data from analysis reports using text parsing (as fallback)
     market_report = final_state.get("market_report", "")
@@ -304,13 +414,14 @@ def _extract_technical_indicators(text: str, indicators: Dict[str, str]) -> Dict
             break
     
     # Moving averages - look for SMA patterns with realistic prices
+    # Use more restrictive patterns to avoid matching random dollar amounts
     sma_patterns = [
-        (r"50-day\s+SMA.*?\$?(\d{2,3}\.?\d*)", "sma_50"),
-        (r"SMA.*?50.*?\$?(\d{2,3}\.?\d*)", "sma_50"),
-        (r"200-day\s+SMA.*?\$?(\d{2,3}\.?\d*)", "sma_20"),  # Using available field
-        (r"SMA.*?200.*?\$?(\d{2,3}\.?\d*)", "sma_20"),
-        (r"20-day\s+SMA.*?\$?(\d{2,3}\.?\d*)", "sma_20"),
-        (r"SMA.*?20.*?\$?(\d{2,3}\.?\d*)", "sma_20")
+        (r"50-day\s+(?:simple\s+)?moving\s+average.*?\$?(\d{2,3}\.?\d*)", "sma_50"),
+        (r"(?:simple\s+)?moving\s+average.*?50.*?\$?(\d{2,3}\.?\d*)", "sma_50"),
+        (r"SMA.*?50.*?(?:is|at|of|around).*?\$?(\d{2,3}\.?\d*)", "sma_50"),
+        (r"20-day\s+(?:simple\s+)?moving\s+average.*?\$?(\d{2,3}\.?\d*)", "sma_20"),
+        (r"(?:simple\s+)?moving\s+average.*?20.*?\$?(\d{2,3}\.?\d*)", "sma_20"),
+        (r"SMA.*?20.*?(?:is|at|of|around).*?\$?(\d{2,3}\.?\d*)", "sma_20")
     ]
     
     for pattern, field in sma_patterns:
@@ -318,7 +429,8 @@ def _extract_technical_indicators(text: str, indicators: Dict[str, str]) -> Dict
         for match in matches:
             try:
                 price = float(match)
-                if 10 <= price <= 1000:  # Reasonable range for SMA
+                # Use more restrictive range for SMA values (avoid very small values like $10)
+                if 50 <= price <= 1000:  # More realistic range for major stock SMAs
                     indicators[field] = f"${price:.2f}"
                     break
             except ValueError:
@@ -535,6 +647,8 @@ def _calculate_technical_indicators_from_data(ticker: str, analysis_date: str = 
                 # Ensure proper timezone handling and data sorting
                 price_data = price_data.sort_index()
                 logger.info(f"✅ Got {len(price_data)} days of cached data for {ticker}")
+                
+
         except Exception as e:
             logger.warning(f"Cached data fetch failed for {ticker}: {e}")
             price_data = None
@@ -618,14 +732,25 @@ def _calculate_technical_indicators_from_data(ticker: str, analysis_date: str = 
                 # Always use the most recent 20 trading days available
                 last_20_prices = close_prices.tail(20)
                 sma_20 = last_20_prices.mean()
-                indicators["sma_20"] = f"${sma_20:.2f}"
-                logger.info(f"✅ SMA-20 calculated for {ticker}: ${sma_20:.2f} (from {len(last_20_prices)} most recent prices)")
+                
+                # Ensure the SMA value is reasonable (between $10 and $2000 for most stocks)
+                if 10 <= sma_20 <= 2000:
+                    indicators["sma_20"] = f"${sma_20:.2f}"
+                    logger.info(f"✅ SMA-20 calculated for {ticker}: ${sma_20:.2f} (from {len(last_20_prices)} most recent prices)")
+                else:
+                    logger.warning(f"⚠️ SMA-20 value seems unreasonable for {ticker}: ${sma_20:.2f}, skipping")
             
             if len(close_prices) >= 50:
                 # Always use the most recent 50 trading days available  
                 last_50_prices = close_prices.tail(50)
                 sma_50 = last_50_prices.mean()
-                indicators["sma_50"] = f"${sma_50:.2f}"
+                
+                # Ensure the SMA value is reasonable
+                if 10 <= sma_50 <= 2000:
+                    indicators["sma_50"] = f"${sma_50:.2f}"
+                    logger.info(f"✅ SMA-50 calculated for {ticker}: ${sma_50:.2f} (from {len(last_50_prices)} most recent prices)")
+                else:
+                    logger.warning(f"⚠️ SMA-50 value seems unreasonable for {ticker}: ${sma_50:.2f}, skipping")
             
             # Calculate RSI manually
             if len(close_prices) >= 15:
@@ -1537,6 +1662,39 @@ def _extract_key_insights_from_raw_report(raw_report: str, report_type: str) -> 
         return formatted_insights
     else:
         return f"Advanced {report_type} analysis methodology applied with institutional-quality standards."
+
+
+def _format_market_cap(market_cap_value: Union[float, int, str]) -> str:
+    """
+    Format raw market cap number into human-readable format
+    
+    Args:
+        market_cap_value: Raw market cap value (number or string)
+    
+    Returns:
+        Human-readable market cap string (e.g., "~$3.7T", "~$150B")
+    """
+    try:
+        # Convert to float if it's a string
+        if isinstance(market_cap_value, str):
+            # Remove any existing formatting
+            clean_value = market_cap_value.replace('$', '').replace(',', '').replace('~', '')
+            cap_value = float(clean_value)
+        else:
+            cap_value = float(market_cap_value)
+        
+        # Format based on magnitude
+        if cap_value >= 1000000000000:  # >= 1T
+            return f"~${cap_value/1000000000000:.1f}T"
+        elif cap_value >= 1000000000:  # >= 1B
+            return f"~${cap_value/1000000000:.0f}B"
+        elif cap_value >= 1000000:  # >= 1M
+            return f"~${cap_value/1000000:.0f}M"
+        else:
+            return f"~${cap_value:.0f}"
+            
+    except (ValueError, TypeError):
+        return "N/A"
 
 
 # Example usage and testing functions

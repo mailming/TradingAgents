@@ -15,6 +15,8 @@ import sys
 from datetime import datetime, timedelta
 import uuid
 import time
+import json
+import re
 
 # Import TradingAgents components
 from tradingagents.graph.trading_graph import TradingAgentsGraph
@@ -33,6 +35,180 @@ from tradingagents.agents.utils.market_data_utils import (
     format_news_analysis_report,
     format_fundamental_analysis_report
 )
+
+def is_api_overloaded_error(error_message):
+    """Check if error is due to API overload/rate limiting"""
+    error_str = str(error_message).lower()
+    
+    # Patterns that indicate API overload
+    overload_patterns = [
+        "overloaded",
+        "overloaded_error",
+        "rate limit",
+        "rate_limit",
+        "too many requests",
+        "429",
+        "529",
+        "service unavailable",
+        "server overload",
+        "temporarily unavailable"
+    ]
+    
+    return any(pattern in error_str for pattern in overload_patterns)
+
+def retry_on_overload(func, max_retries=3, wait_time=30):
+    """Retry function with exponential backoff for API overload errors"""
+    
+    for attempt in range(max_retries + 1):
+        try:
+            return func()
+        except Exception as e:
+            if is_api_overloaded_error(str(e)):
+                if attempt < max_retries:
+                    wait_seconds = wait_time * (2 ** attempt)  # Exponential backoff
+                    print(f"   ⏳ API overloaded (attempt {attempt + 1}/{max_retries + 1}). Waiting {wait_seconds} seconds before retry...")
+                    time.sleep(wait_seconds)
+                    continue
+                else:
+                    print(f"   ❌ API still overloaded after {max_retries} retries. Giving up.")
+                    raise e
+            else:
+                # Non-overload error, don't retry
+                raise e
+    
+    # This should never be reached
+    raise Exception("Unexpected error in retry logic")
+
+def extract_analyst_perspective(history_string, analyst_type):
+    """Extract meaningful perspective from analyst history string"""
+    if not history_string or not isinstance(history_string, str):
+        return ""
+    
+    # Split by lines and get all analyst responses
+    lines = history_string.strip().split('\n')
+    
+    # Find analyst sections and extract meaningful content
+    prefix = f"{analyst_type.capitalize()} Analyst:"
+    analyst_content = []
+    
+    for i, line in enumerate(lines):
+        line = line.strip()
+        if line.startswith(prefix):
+            # Found analyst section, now collect the actual content
+            content_lines = []
+            
+            # Get content after the prefix on same line
+            remaining_content = line[len(prefix):].strip()
+            if remaining_content and not any(keyword in remaining_content.upper() for keyword in ["PERSPECTIVE:", "ANALYSIS:", "THESIS", "CASE FOR", "EXAMINATION"]):
+                content_lines.append(remaining_content)
+            
+            # Collect following lines until next analyst or end
+            for j in range(i + 1, len(lines)):
+                next_line = lines[j].strip()
+                
+                # Stop if we hit another analyst
+                if any(next_line.startswith(f"{analyst.capitalize()} Analyst:") for analyst in ["bull", "bear", "neutral", "risky", "safe"]):
+                    break
+                
+                # Skip empty lines and title/header lines
+                if (next_line and 
+                    not any(keyword in next_line.upper() for keyword in ["PERSPECTIVE:", "ANALYSIS:", "THESIS", "CASE FOR", "EXAMINATION", "🐻", "🐂"]) and
+                    len(next_line) > 15):
+                    content_lines.append(next_line)
+                
+                # Stop after collecting enough content
+                if len(' '.join(content_lines)) > 300:
+                    break
+            
+            # Join the content and clean it up
+            if content_lines:
+                full_content = ' '.join(content_lines).strip()
+                
+                # Remove any remaining formatting artifacts
+                full_content = full_content.replace('**', '').replace('##', '').replace('###', '')
+                
+                # Extract key sentences (first few substantive sentences)
+                sentences = full_content.split('. ')
+                meaningful_sentences = []
+                
+                for sentence in sentences:
+                    sentence = sentence.strip()
+                    if (len(sentence) > 30 and 
+                        not any(keyword in sentence.upper() for keyword in ["PERSPECTIVE", "ANALYSIS", "THESIS", "CASE FOR", "I'LL", "HERE'S", "LET ME"])):
+                        meaningful_sentences.append(sentence)
+                        if len(meaningful_sentences) >= 2:  # Limit to 2 key sentences
+                            break
+                
+                if meaningful_sentences:
+                    result = '. '.join(meaningful_sentences)
+                    if not result.endswith('.'):
+                        result += '.'
+                    
+                    # Truncate if too long
+                    if len(result) > 250:
+                        result = result[:247] + "..."
+                    
+                    analyst_content.append(result)
+    
+    # Return the last (most recent) meaningful response
+    return analyst_content[-1] if analyst_content else ""
+
+def extract_concise_consensus(judge_decision):
+    """Extract a concise consensus from the verbose judge decision"""
+    if not judge_decision or not isinstance(judge_decision, str):
+        return "Balanced approach recommended based on comprehensive analysis"
+    
+    # Look for the actual recommendation
+    decision = "HOLD"
+    reasoning = ""
+    
+    # Extract the recommendation
+    if "Recommendation: BUY" in judge_decision or "BUY" in judge_decision.upper():
+        decision = "BUY"
+    elif "Recommendation: SELL" in judge_decision or "SELL" in judge_decision.upper():
+        decision = "SELL"
+    elif "Recommendation: HOLD" in judge_decision or "HOLD" in judge_decision.upper():
+        decision = "HOLD"
+    
+    # Extract key reasoning - look for rationale section
+    lines = judge_decision.split('\n')
+    rationale_found = False
+    key_points = []
+    
+    for line in lines:
+        line = line.strip()
+        if "Rationale:" in line or "rationale" in line.lower():
+            rationale_found = True
+            continue
+        
+        if rationale_found and line:
+            # Stop at strategic plan or other sections
+            if any(keyword in line.lower() for keyword in ["strategic", "entry strategy", "risk management", "position sizing", "learning from"]):
+                break
+            
+            # Extract meaningful points
+            if line.startswith(("1.", "2.", "3.", "-", "•")) or len(line) > 30:
+                clean_line = line.lstrip("123456789.- •").strip()
+                if len(clean_line) > 20 and len(clean_line) < 150:
+                    key_points.append(clean_line)
+                    if len(key_points) >= 2:  # Limit to 2 key points
+                        break
+    
+    # Build concise consensus
+    if key_points:
+        reasoning = ". ".join(key_points[:2])
+        if len(reasoning) > 150:
+            reasoning = reasoning[:147] + "..."
+    else:
+        # Fallback to basic reasoning based on decision
+        if decision == "BUY":
+            reasoning = "Strong fundamentals and growth prospects outweigh potential risks"
+        elif decision == "SELL":
+            reasoning = "Significant risks and overvaluation concerns warrant caution"
+        else:
+            reasoning = "Mixed signals suggest a balanced approach with careful monitoring"
+    
+    return f"{decision}: {reasoning}"
 
 def is_trading_day(date):
     """Check if a date is a trading day (not weekend or major US holiday)"""
@@ -66,9 +242,13 @@ def run_analysis(ticker, analysis_date):
     day_name = analysis_date.strftime('%A')
     is_trading = is_trading_day(analysis_date)
     
-    print(f"📊 Running {ticker} Analysis for {day_name}, {date_str}")
+    print(f"📊 Checking {ticker} Analysis for {day_name}, {date_str}")
     if not is_trading:
-        print(f"   📅 Non-trading day - Analysis will use most recent market data")
+        print(f"   📅 Non-trading day - Skipping analysis")
+        print(f"   ⏭️  Market is closed on {day_name}s or holidays")
+        return None
+    
+    print(f"📊 Running {ticker} Analysis for {day_name}, {date_str}")
     
     # Check API keys
     required_keys = ['ANTHROPIC_API_KEY', 'FINANCIALDATASETS_API_KEY']
@@ -101,7 +281,11 @@ def run_analysis(ticker, analysis_date):
     
     # Initialize TradingAgents - use sequential processing to avoid message deletion issues
     try:
-        ta = TradingAgentsGraph(debug=False, config=config, parallel_processing=False)
+        def init_trading_agents():
+            return TradingAgentsGraph(debug=False, config=config, parallel_processing=False)
+        
+        print(f"   🔄 Initializing TradingAgents (with auto-retry on API overload)...")
+        ta = retry_on_overload(init_trading_agents, max_retries=2, wait_time=30)
         print(f"   ✅ TradingAgents initialized successfully")
     except Exception as e:
         if "already exists" in str(e).lower() or "collection" in str(e).lower():
@@ -115,7 +299,11 @@ def run_analysis(ticker, analysis_date):
                         chroma_client.delete_collection(collection_name)
                     except:
                         pass
-                ta = TradingAgentsGraph(debug=False, config=config)
+                
+                def reinit_trading_agents():
+                    return TradingAgentsGraph(debug=False, config=config)
+                
+                ta = retry_on_overload(reinit_trading_agents, max_retries=2, wait_time=30)
                 print(f"   ✅ TradingAgents reinitialized with fresh collections")
             except Exception as retry_error:
                 print(f"❌ Failed to reinitialize: {retry_error}")
@@ -124,11 +312,15 @@ def run_analysis(ticker, analysis_date):
             print(f"❌ Failed to initialize: {e}")
             return None
     
-    # Run analysis
+    # Run analysis with retry logic for API overload
     start_time = time.time()
     
     try:
-        final_state, decision = ta.propagate(ticker, date_str)
+        def run_analysis_with_retry():
+            return ta.propagate(ticker, date_str)
+        
+        print(f"   🔄 Running analysis (with auto-retry on API overload)...")
+        final_state, decision = retry_on_overload(run_analysis_with_retry, max_retries=3, wait_time=30)
         end_time = time.time()
         duration = end_time - start_time
         
@@ -205,9 +397,9 @@ def run_analysis(ticker, analysis_date):
                 },
                 "investment_debate": {
                     "status": "completed",
-                    "bull_perspective": final_state.get("investment_debate_state", {}).get("bull_history", ["Strong fundamentals and growth potential"])[-1] if final_state.get("investment_debate_state", {}).get("bull_history") else "Strong fundamentals and growth potential",
-                    "bear_perspective": final_state.get("investment_debate_state", {}).get("bear_history", ["Market risks and valuation concerns"])[-1] if final_state.get("investment_debate_state", {}).get("bear_history") else "Market risks and valuation concerns",
-                    "consensus": final_state.get("investment_debate_state", {}).get("judge_decision", "balanced approach recommended"),
+                    "bull_perspective": extract_analyst_perspective(final_state.get("investment_debate_state", {}).get("bull_history", ""), "bull") or "Strong fundamentals and growth potential with upside opportunities",
+                    "bear_perspective": extract_analyst_perspective(final_state.get("investment_debate_state", {}).get("bear_history", ""), "bear") or "Market risks and valuation concerns requiring caution",
+                    "consensus": extract_concise_consensus(final_state.get("investment_debate_state", {}).get("judge_decision", "")),
                     "claude_analysis": "Multi-agent debate facilitated by Claude AI with deep reasoning"
                 }
             },
@@ -308,7 +500,15 @@ def main():
         except Exception as e:
             print(f"❌ Error saving results: {e}")
     else:
-        print("❌ Analysis failed. Check error messages above.")
+        # Check if it was skipped due to non-trading day
+        if not is_trading_day(analysis_date):
+            print()
+            print("⏭️  Analysis Skipped - Non-Trading Day")
+            print("=" * 40)
+            print("💡 Try running analysis on a weekday when markets are open")
+            print("📅 Markets are typically closed on weekends and major holidays")
+        else:
+            print("❌ Analysis failed. Check error messages above.")
 
 if __name__ == "__main__":
     main()
