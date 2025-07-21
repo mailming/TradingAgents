@@ -13,6 +13,10 @@ Usage: python run_universal_analysis.py TICKER [YYYY-MM-DD]
 import os
 import sys
 from datetime import datetime, timedelta
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 import uuid
 import time
 import json
